@@ -14,10 +14,11 @@ namespace octet {
     btCollisionDispatcher *dispatcher;            /// handler for collisions between objects
     btDbvtBroadphase *broadphase;                 /// handler for broadphase (rough) collision
     btSequentialImpulseConstraintSolver *solver;  /// handler to resolve collisions
-    btDiscreteDynamicsWorld *world;             /// physics world, contains rigid bodies
+    btDiscreteDynamicsWorld *world;               /// physics world, contains rigid bodies
 
     dynarray<btRigidBody*> rigid_bodies;
     dynarray<scene_node*> nodes;
+    scene_node *scenecameranode;
 
     void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
 
@@ -49,6 +50,48 @@ namespace octet {
 
     }
 
+      void add_cylinder(mat4t_in modelToWorld, float diameter, float height, material *mat, bool is_dynamic = true)
+      {
+         btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
+         btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
+
+         btCollisionShape *shape = new btCylinderShape(btVector3(diameter / 16.0f, height / 2.0f, diameter/16.0f));
+
+         btTransform transform(matrix, pos);
+
+         btDefaultMotionState *motion = new btDefaultMotionState(transform);
+
+         btScalar mass = is_dynamic ? 5.0f : 0.0f;
+         btVector3 inertia;
+         shape->calculateLocalInertia(mass, inertia);
+
+         btRigidBody *rigidBody = new btRigidBody(mass, motion, shape, inertia);
+         world->addRigidBody(rigidBody);
+         rigid_bodies.push_back(rigidBody);
+
+         //mesh_cylinder *hatBottom = new mesh_cylinder(zcylinder(), mat4t(), 30);
+         //mat4t hatBottomPosition;
+         //hatBottomPosition.loadIdentity();
+         //hatBottomPosition.translate(0, 2, 0);
+         //hatBottomPosition.scale(4, .025f, 4);
+         //hatBottomPosition.rotate(90, 1, 0, 0);
+         //scene_node *nodeHatBottom = new scene_node(hatBottomPosition, atom_);
+         //nodes.push_back(nodeHatBottom);
+         //app_scene->add_mesh_instance(new mesh_instance(nodeHatBottom, hatBottom, mat));
+
+         mat4t position;
+         position.loadIdentity();
+         position.scale(10, 0.5f, 10);
+         position.rotate(90, 1, 0, 0);
+         mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(), position, 50);
+         //mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(vec3(0, 0, 0),500,500), mat4t(vec4(1.0f, 0.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.0f), vec4(0.0f, -1.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 0.0f, 1.0f)));
+         
+         scene_node *node = new scene_node(modelToWorld, atom_);
+         nodes.push_back(node);
+
+         app_scene->add_child(node);
+         app_scene->add_mesh_instance(new mesh_instance(node, meshscylinder, mat));
+      }
 
     void add_box(mat4t_in modelToWorld, vec3_in size, material *mat, bool is_dynamic=true) {
 
@@ -94,34 +137,52 @@ namespace octet {
 
     /// this is called once OpenGL is initialized
     void app_init() {
+
       app_scene =  new visual_scene();
+      //app_scene->create_default_camera();
+      //app_scene->create_default_lights();
       app_scene->create_default_camera_and_lights();
-      app_scene->get_camera_instance(0)->get_node()->translate(vec3(0, 5, 0));
+      scenecameranode = app_scene->get_camera_instance(0)->get_node();
+
+      scenecameranode->rotate(-24, vec3(1, 0, 0));
+      scenecameranode->translate(vec3(0, 20, 10));    
 
       mat4t modelToWorld;
+      modelToWorld.loadIdentity();
+
       material *floor_mat = new material(vec4(0, 1, 0, 1));
-
       // add the ground (as a static object)
-      add_box(modelToWorld, vec3(200.0f, 0.5f, 200.0f), floor_mat, false);
-      material *mat = new material(vec4(0, 1, 1, 1));
+      add_cylinder(modelToWorld,100.0f,2.0f,floor_mat,false);
+     //add_box(modelToWorld, vec3(200.0f, 0.5f, 200.0f), floor_mat, false);
+      //Then the hat (bottom and top)
+    /*mesh_cylinder *hatBottom = new mesh_cylinder(zcylinder(), mat4t(), 30);
+      mat4t hatBottomPosition;
+      hatBottomPosition.loadIdentity();
+      hatBottomPosition.translate(0, 2, 0);
+      hatBottomPosition.scale(4, .025f, 4);
+      hatBottomPosition.rotate(90, 1, 0, 0);
+      scene_node *nodeHatBottom = new scene_node(hatBottomPosition, atom_);*/
+      //hatNode->add_child(nodeHatBottom);
+      //app_scene->add_mesh_instance(new mesh_instance(nodeHatBottom, hatBottom, floor_mat));
 
-      
-      // add the boxes (as dynamic objects)
+      material *mat = new material(vec4(0, 1, 1, 1));      
+      // add a sphere (as dynamic objects)
       modelToWorld.translate(0.0f, 20.0f, 0);
       add_sphere(modelToWorld,2.0f,mat,true);
       // add the boxes (as dynamic objects)
-      modelToWorld.translate(0.0f, -10.0f, 0);
+      modelToWorld.loadIdentity();
+      modelToWorld.translate(0.0f, 10.0f, 0);
       
-      for (int i = 0; i != 20; ++i) {
-        modelToWorld.translate(3, 0, 0);
-        modelToWorld.rotateZ(360/20);
-        add_box(modelToWorld, vec3(0.5f), mat);
-      }
+      //for (int i = 0; i != 20; ++i) {
+      //  add_box(modelToWorld, vec3(0.5f), mat);
+      //  modelToWorld.translate(3, 0, 0);
+      //  modelToWorld.rotateZ(360 / 20);
+      //}
 
       // comedy box
       modelToWorld.loadIdentity();
       modelToWorld.translate(0, 200, 0);
-      add_box(modelToWorld, vec3(5.0f), floor_mat);
+      //add_box(modelToWorld, vec3(5.0f), floor_mat);
     }
 
     /// this is called to draw the world

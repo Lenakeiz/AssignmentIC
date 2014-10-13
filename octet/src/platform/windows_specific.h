@@ -141,6 +141,20 @@ namespace octet {
       WSADATA wsa;
       WSAStartup(MAKEWORD(2,2), &wsa);
 
+      bool fResult;
+      RECT rectWorkArea;
+
+      //Chuck: checking for screen size (this bool seems to be always true)
+      fResult = SystemParametersInfo(SPI_GETWORKAREA,   // Get screen size
+         0,                // Not used
+         &rectWorkArea,    // Holds area information
+         0);
+
+      if (fResult)
+      {
+         printf("Windows size: %u %u %u %u \n", rectWorkArea.left, rectWorkArea.bottom, rectWorkArea.right, rectWorkArea.top);
+      }
+
       HINSTANCE instance = (HINSTANCE)GetModuleHandle(0);
       HBRUSH brush = (HBRUSH) GetStockObject(NULL_BRUSH);
       HICON icon = LoadIcon(0, IDI_ASTERISK);
@@ -152,12 +166,16 @@ namespace octet {
       };
       RegisterClassW (&wndclass);
 
-      gl_context = 0;
-     
-      window_handle = CreateWindowW(L"MyClass", L"octet",
-        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 768, 768,
-        NULL, NULL, wndclass.hInstance, (LPVOID)this
-      );
+      gl_context = 0;     
+      
+      //Chuck: using rect work area for full size
+      //Chuck: adding costum dwStyle in case I will remove title bar and buttons
+      //DWORD dwStyle = ~(WS_MINIMIZE | WS_MAXIMIZE |WS_MINIMIZEBOX | WS_MAXIMIZEBOX) | WS_OVERLAPPEDWINDOW;
+      DWORD dwExStyle = WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST;
+      window_handle = CreateWindowEx(dwExStyle, L"MyClass", L"Sumo Fighter",
+         WS_OVERLAPPEDWINDOW, 0, 0, rectWorkArea.right, rectWorkArea.bottom,
+         NULL, NULL, wndclass.hInstance, (LPVOID)this
+         );
 
       map()[window_handle] = this;
 
@@ -168,6 +186,7 @@ namespace octet {
 
       RECT rect;
       GetClientRect(window_handle, &rect);
+      
       set_viewport_size(rect.right - rect.left, rect.bottom - rect.top);
 
       app_init();

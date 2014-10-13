@@ -42,7 +42,7 @@ namespace octet { namespace resources {
           if (test) {
             fclose(test);
             value = pfx + i * 3;
-            printf("sucess\n");
+            printf("Success! Maybe...\n");
             break;
           }
         }

@@ -33,6 +33,9 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{22786083-47af-48b2-98c4-2963f667bc44}</UniqueIdentifier>
     </Filter>
+    <Filter Include="game">
+      <UniqueIdentifier>{2451c195-946c-4c38-abb4-605c32a734ff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -426,6 +429,9 @@
     </ClInclude>
     <ClInclude Include="..\..\containers\string.h">
       <Filter>containers</Filter>
+    </ClInclude>
+    <ClInclude Include="mycylinder.h">
+      <Filter>game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

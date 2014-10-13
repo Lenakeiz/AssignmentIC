@@ -39,7 +39,7 @@ namespace octet {
       mesh *helix = new mesh();
 
       // number of steps in helix
-      size_t num_steps = 320;
+      size_t num_steps = 1;
 
       // allocate vertices and indices into OpenGL buffers
       size_t num_vertices = num_steps * 2 + 2;

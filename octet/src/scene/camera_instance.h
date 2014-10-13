@@ -94,6 +94,7 @@ namespace octet { namespace scene {
       this->ymag = ymag;
       this->near_plane = n;
       this->far_plane = f;
+      this->aspect_ratio = aspect_ratio;
       is_ortho = true;
     }
 
