@@ -1,13 +1,13 @@
 #pragma once
-using namespace octet;
 
 class Player
 {
+   int lifes;
 public:
-
-   Player()
+   
+   Player(int n = 4)
    {
-
+      lifes = n;
    }
 
    ~Player()

@@ -21,7 +21,11 @@ namespace octet {
 
     dynarray<btRigidBody*> rigid_bodies;
     dynarray<scene_node*> nodes;
-    //Chuck adding reference to the camera
+    
+    //Chuck: adding array for players currently playing and board
+    dynarray<Player*> players;
+    Board *board;
+    //Chuck: adding reference to the camera
     scene_node *scenecameranode;
 
     void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
@@ -79,6 +83,7 @@ namespace octet {
          mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(), position, 50);
         
          scene_node *node = new scene_node(modelToWorld, atom_);
+         
          nodes.push_back(node);
 
          app_scene->add_child(node);
@@ -147,8 +152,15 @@ namespace octet {
 
       
       // add the ground (as a static object)
-      add_cylinder(modelToWorld,20.0f,2.0f,floor_mat,false);
+      board = new Board(20.0f,2.0f);
+      world->addRigidBody(board->GetRigidBody());
+      rigid_bodies.push_back(board->GetRigidBody());
+      nodes.push_back(board->GetNode());
+      app_scene->add_child(board->GetNode());
+      app_scene->add_mesh_instance(board->GetMesh());
 
+      //add_cylinder(modelToWorld,20.0f,2.0f,floor_mat,false);
+      //board.Draw()
           
       // add a sphere (as dynamic objects)
       modelToWorld.translate(0.0f, 10.0f, 0);
@@ -176,6 +188,9 @@ namespace octet {
       app_scene->begin_render(vx, vy);
 
       world->stepSimulation(1.0f/30);
+
+      //board update
+      //lo
 
       for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
         btRigidBody *rigid_body = rigid_bodies[i];
