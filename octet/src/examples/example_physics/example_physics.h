@@ -56,41 +56,7 @@ namespace octet {
 
     }
 
-      void add_cylinder(mat4t_in modelToWorld, float diameter, float height, material *mat, bool is_dynamic = true)
-      {
-         btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
-         btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
-
-         //Chuck half extent for the zcylinder
-         btCollisionShape *shape = new btCylinderShape(btVector3(diameter, height * 0.5f, diameter));
-
-         btTransform transform(matrix, pos);
-
-         btDefaultMotionState *motion = new btDefaultMotionState(transform);
-
-         btScalar mass = is_dynamic ? 5.0f : 0.0f;
-         btVector3 inertia;
-         shape->calculateLocalInertia(mass, inertia);
-
-         btRigidBody *rigidBody = new btRigidBody(mass, motion, shape, inertia);
-         world->addRigidBody(rigidBody);
-         rigid_bodies.push_back(rigidBody);
-
-         mat4t position;
-         position.loadIdentity();
-         position.scale(diameter, height * 0.5f, diameter);
-         position.rotate(90, 1, 0, 0);
-         mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(), position, 50);
-        
-         scene_node *node = new scene_node(modelToWorld, atom_);
-         
-         nodes.push_back(node);
-
-         app_scene->add_child(node);
-         app_scene->add_mesh_instance(new mesh_instance(node, meshscylinder, mat));
-      }
-
-    void add_box(mat4t_in modelToWorld, vec3_in size, material *mat, bool is_dynamic=true) {
+   void add_box(mat4t_in modelToWorld, vec3_in size, material *mat, bool is_dynamic=true) {
 
       btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
       btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
@@ -136,13 +102,13 @@ namespace octet {
     void app_init() {
 
       app_scene =  new visual_scene();
-      //app_scene->create_default_camera();
-      //app_scene->create_default_lights();
+
       app_scene->create_default_camera_and_lights();
       scenecameranode = app_scene->get_camera_instance(0)->get_node();
 
-      scenecameranode->access_nodeToParent().rotateX(-30);//rotate(-24, vec3(1, 0, 0));
-      scenecameranode->access_nodeToParent().translate(0,20,20);//translate(vec3(0, 20, 5));
+      //Chuck: camera is fixed, changing the parameters in order to have camera looking at the platform along Z-axis
+      scenecameranode->access_nodeToParent().rotateX(-30);
+      scenecameranode->access_nodeToParent().translate(0,20,20);
 
       mat4t modelToWorld;
       material *floor_mat = new material(vec4(0, 1, 0, 1));
@@ -159,9 +125,6 @@ namespace octet {
       app_scene->add_child(board->GetNode());
       app_scene->add_mesh_instance(board->GetMesh());
 
-      //add_cylinder(modelToWorld,20.0f,2.0f,floor_mat,false);
-      //board.Draw()
-          
       // add a sphere (as dynamic objects)
       modelToWorld.translate(0.0f, 10.0f, 0);
       add_sphere(modelToWorld,1.0f,mat,true);
@@ -188,9 +151,6 @@ namespace octet {
       app_scene->begin_render(vx, vy);
 
       world->stepSimulation(1.0f/30);
-
-      //board update
-      //lo
 
       for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
         btRigidBody *rigid_body = rigid_bodies[i];
