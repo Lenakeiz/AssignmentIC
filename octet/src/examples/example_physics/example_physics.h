@@ -4,6 +4,9 @@
 //
 // Modular Framework for OpenGLES2 rendering on multiple platforms.
 //
+#include "Player.h"
+#include "Board.h"
+
 namespace octet {
   /// Scene using bullet for physics effects.
   class example_physics : public app {

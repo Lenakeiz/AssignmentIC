@@ -433,6 +433,8 @@
     <ClInclude Include="mycylinder.h">
       <Filter>game</Filter>
     </ClInclude>
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="Board.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\resources\mesh_builder.inl">
