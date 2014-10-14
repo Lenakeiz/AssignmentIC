@@ -18,14 +18,13 @@ namespace octet {
 
     dynarray<btRigidBody*> rigid_bodies;
     dynarray<scene_node*> nodes;
+    //Chuck adding reference to the camera
     scene_node *scenecameranode;
 
     void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
 
         btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
         btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
-
-        // cosa rappresenta di preciso modeltotheworld variable?
 
         btCollisionShape *shape = new btSphereShape(size);
 
@@ -55,7 +54,8 @@ namespace octet {
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
          btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
 
-         btCollisionShape *shape = new btCylinderShape(btVector3(diameter / 16.0f, height / 2.0f, diameter/16.0f));
+         //Chuck half extent for the zcylinder
+         btCollisionShape *shape = new btCylinderShape(btVector3(diameter, height * 0.5f, diameter));
 
          btTransform transform(matrix, pos);
 
@@ -69,23 +69,12 @@ namespace octet {
          world->addRigidBody(rigidBody);
          rigid_bodies.push_back(rigidBody);
 
-         //mesh_cylinder *hatBottom = new mesh_cylinder(zcylinder(), mat4t(), 30);
-         //mat4t hatBottomPosition;
-         //hatBottomPosition.loadIdentity();
-         //hatBottomPosition.translate(0, 2, 0);
-         //hatBottomPosition.scale(4, .025f, 4);
-         //hatBottomPosition.rotate(90, 1, 0, 0);
-         //scene_node *nodeHatBottom = new scene_node(hatBottomPosition, atom_);
-         //nodes.push_back(nodeHatBottom);
-         //app_scene->add_mesh_instance(new mesh_instance(nodeHatBottom, hatBottom, mat));
-
          mat4t position;
          position.loadIdentity();
-         position.scale(10, 0.5f, 10);
+         position.scale(diameter, height * 0.5f, diameter);
          position.rotate(90, 1, 0, 0);
          mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(), position, 50);
-         //mesh_cylinder *meshscylinder = new mesh_cylinder(zcylinder(vec3(0, 0, 0),500,500), mat4t(vec4(1.0f, 0.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.0f), vec4(0.0f, -1.0f, 0.0f, 0.0f), vec4(0.0f, 0.0f, 0.0f, 1.0f)));
-         
+        
          scene_node *node = new scene_node(modelToWorld, atom_);
          nodes.push_back(node);
 
@@ -144,31 +133,23 @@ namespace octet {
       app_scene->create_default_camera_and_lights();
       scenecameranode = app_scene->get_camera_instance(0)->get_node();
 
-      scenecameranode->rotate(-24, vec3(1, 0, 0));
-      scenecameranode->translate(vec3(0, 20, 10));    
+      scenecameranode->access_nodeToParent().rotateX(-30);//rotate(-24, vec3(1, 0, 0));
+      scenecameranode->access_nodeToParent().translate(0,20,20);//translate(vec3(0, 20, 5));
 
       mat4t modelToWorld;
+      material *floor_mat = new material(vec4(0, 1, 0, 1));
+      material *mat = new material(vec4(0, 1, 1, 1));
+      add_sphere(modelToWorld, 1.0f, mat, true);
       modelToWorld.loadIdentity();
 
-      material *floor_mat = new material(vec4(0, 1, 0, 1));
+      
       // add the ground (as a static object)
-      add_cylinder(modelToWorld,100.0f,2.0f,floor_mat,false);
-     //add_box(modelToWorld, vec3(200.0f, 0.5f, 200.0f), floor_mat, false);
-      //Then the hat (bottom and top)
-    /*mesh_cylinder *hatBottom = new mesh_cylinder(zcylinder(), mat4t(), 30);
-      mat4t hatBottomPosition;
-      hatBottomPosition.loadIdentity();
-      hatBottomPosition.translate(0, 2, 0);
-      hatBottomPosition.scale(4, .025f, 4);
-      hatBottomPosition.rotate(90, 1, 0, 0);
-      scene_node *nodeHatBottom = new scene_node(hatBottomPosition, atom_);*/
-      //hatNode->add_child(nodeHatBottom);
-      //app_scene->add_mesh_instance(new mesh_instance(nodeHatBottom, hatBottom, floor_mat));
+      add_cylinder(modelToWorld,20.0f,2.0f,floor_mat,false);
 
-      material *mat = new material(vec4(0, 1, 1, 1));      
+          
       // add a sphere (as dynamic objects)
-      modelToWorld.translate(0.0f, 20.0f, 0);
-      add_sphere(modelToWorld,2.0f,mat,true);
+      modelToWorld.translate(0.0f, 10.0f, 0);
+      add_sphere(modelToWorld,1.0f,mat,true);
       // add the boxes (as dynamic objects)
       modelToWorld.loadIdentity();
       modelToWorld.translate(0.0f, 10.0f, 0);
@@ -192,6 +173,7 @@ namespace octet {
       app_scene->begin_render(vx, vy);
 
       world->stepSimulation(1.0f/30);
+
       for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
         btRigidBody *rigid_body = rigid_bodies[i];
         btQuaternion btq = rigid_body->getOrientation();
