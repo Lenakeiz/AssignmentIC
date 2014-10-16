@@ -110,13 +110,6 @@ namespace octet {
       scenecameranode->access_nodeToParent().rotateX(-30);
       scenecameranode->access_nodeToParent().translate(0,20,20);
 
-      mat4t modelToWorld;
-      material *floor_mat = new material(vec4(0, 1, 0, 1));
-      material *mat = new material(vec4(0, 1, 1, 1));
-      add_sphere(modelToWorld, 1.0f, mat, true);
-      modelToWorld.loadIdentity();
-
-      
       // add the ground (as a static object)
       board = new Board(20.0f,2.0f);
       world->addRigidBody(board->GetRigidBody());
@@ -125,24 +118,14 @@ namespace octet {
       app_scene->add_child(board->GetNode());
       app_scene->add_mesh_instance(board->GetMesh());
 
-      // add a sphere (as dynamic objects)
-      modelToWorld.translate(0.0f, 10.0f, 0);
-      add_sphere(modelToWorld,1.0f,mat,true);
-      // add the boxes (as dynamic objects)
-      modelToWorld.loadIdentity();
-      modelToWorld.translate(0.0f, 10.0f, 0);
-      
-      //for (int i = 0; i != 20; ++i) {
-      //  add_box(modelToWorld, vec3(0.5f), mat);
-      //  modelToWorld.translate(3, 0, 0);
-      //  modelToWorld.rotateZ(360 / 20);
-      //}
+      Player *player = new Player(1.0f, 0.5f, Color::RED);
+      world->addRigidBody(player->GetRigidBody());
+      rigid_bodies.push_back(player->GetRigidBody());
+      nodes.push_back(player->GetNode());
+      app_scene->add_child(player->GetNode());
+      app_scene->add_mesh_instance(player->GetMesh());
 
-      // comedy box
-      modelToWorld.loadIdentity();
-      modelToWorld.translate(0, 200, 0);
-      //add_box(modelToWorld, vec3(5.0f), floor_mat);
-    }
+   }
 
     /// this is called to draw the world
     void draw_world(int x, int y, int w, int h) {

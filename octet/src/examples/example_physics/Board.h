@@ -1,9 +1,10 @@
 #pragma once
 
-
 namespace octet{
    class Board
    {
+
+   private:
       int current_tilt;
       ref<material> mat;
       ref<scene_node> node;
