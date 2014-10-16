@@ -45,7 +45,10 @@ namespace octet {
          //Saving rigid body 
          rigidBody = new btRigidBody(mass, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
 
-         //Creating node to draw with mesh
+         //prevent body from deactivating
+         rigidBody->setActivationState(DISABLE_DEACTIVATION);
+
+         //Creating node to draw with mesh (cylinder mesh is created along z axis: scale and rotate)
          mat4t position;
          position.loadIdentity();
          position.scale(diameter, height * 0.5f, diameter);
@@ -53,6 +56,14 @@ namespace octet {
          mesh_cylinder* meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);
          meshinstance = new mesh_instance(node, meshcylinder, mat);
+      }
+
+      void ApplyCentralForce(const btVector3& centralForce){
+         rigidBody->applyCentralForce(centralForce);
+      }
+
+      void ApplyCentralImpulse(const btVector3& centralImpulse){
+         rigidBody->applyCentralImpulse(centralImpulse);
       }
 
       ~Player()

@@ -34,7 +34,7 @@ namespace octet{
          shape->calculateLocalInertia(0.0f, inertia);
          //Saving rigid body 
          rigidBody = new btRigidBody(0.0f, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
-
+         
          //Creating node to draw with mesh
          mat4t position;
          position.loadIdentity();
