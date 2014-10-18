@@ -60,31 +60,44 @@ namespace octet {
       }
 
       void acquireInputs(){
+
+         btVector3 physics_vector(0, 0, 0);
+
          if (is_key_down('W')){
-            players[0]->ApplyCentralImpulse(btVector3(0, 0, -20));
+            physics_vector += (btVector3(0, 0, -20));
          }
          if (is_key_down('A')){
-            players[0]->ApplyCentralImpulse(btVector3(-20, 0, 0));
+            physics_vector += (btVector3(-20, 0, 0));
          }
          if (is_key_down('S')){
-            players[0]->ApplyCentralImpulse(btVector3(0, 0, 20));
+            physics_vector += (btVector3(0, 0, 20));
          }
          if (is_key_down('D')){
-            players[0]->ApplyCentralImpulse(btVector3(20, 0, 0));
+            physics_vector += (btVector3(20, 0, 0));
          }
 
+         players[0]->ApplyCentralForce(physics_vector);
+         
+         physics_vector = btVector3(0,0,0);
+
          if (is_key_down(key_up)){
-            players[1]->ApplyCentralForce(btVector3(0, 0, -20));
+            physics_vector += btVector3(0, 0, -60);
+            //players[1]->ApplyCentralForce(btVector3(0, 0, -60));
          }
          if (is_key_down(key_left)){
-            players[1]->ApplyCentralForce(btVector3(-20, 0, 0));
+            physics_vector += btVector3(-60, 0, 0);
+            //players[1]->ApplyCentralForce(btVector3(-60, 0, 0));
          }
          if (is_key_down(key_down)){
-            players[1]->ApplyCentralForce(btVector3(0, 0, 20));
+            physics_vector += btVector3(0, 0, 60);
+            //players[1]->ApplyCentralForce(btVector3(0, 0, 60));
          }
          if (is_key_down(key_right)){
-            players[1]->ApplyCentralForce(btVector3(20, 0, 0));
+            physics_vector += btVector3(60, 0, 0);
+            //players[1]->ApplyCentralForce(btVector3(60, 0, 0));
          }
+
+         players[1]->ApplyCentralForce(physics_vector);
 
       }
    
@@ -115,7 +128,7 @@ namespace octet {
             //Chuck: camera is fixed, changing the parameters in order to have camera looking at the platform along Z-axis
             scenecameranode->access_nodeToParent().rotateX(-30);
             scenecameranode->access_nodeToParent().translate(0,20,20);
-
+            world->setGravity(btVector3(0,-40,0)); //To prevent strange behaviour on the collisions (on over the other)
             // add the ground (as a static object)
             board = new Board(20.0f,2.0f);
             world->addRigidBody(board->GetRigidBody());
@@ -126,7 +139,7 @@ namespace octet {
 
             for (int i = 0; i < num_players; i++)
             {
-               Player *player = new Player(1.0f, 0.5f, (Color)i);
+               Player *player = new Player(2.0f, 1.0f, (Color)i);
                world->addRigidBody(player->GetRigidBody());
                rigid_bodies.push_back(player->GetRigidBody());
                nodes.push_back(player->GetNode());
@@ -139,12 +152,10 @@ namespace octet {
 
          /// this is called to draw the world
          void draw_world(int x, int y, int w, int h) {
-            int vx = 0, vy = 0;
-            acquireInputs();
-            get_viewport_size(vx, vy);
-            app_scene->begin_render(vx, vy);
-
+            
             world->stepSimulation(1.0f/60);
+
+            acquireInputs();
 
             for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
                btRigidBody *rigid_body = rigid_bodies[i];
@@ -159,6 +170,12 @@ namespace octet {
             // update matrices. assume 30 fps.
             app_scene->update(1.0f/30);
 
+            int vx = 0, vy = 0;
+
+            get_viewport_size(vx, vy);
+            app_scene->begin_render(vx, vy);
+
+            
             // draw the scene
             app_scene->render((float)vx / vy);
          }

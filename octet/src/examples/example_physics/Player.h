@@ -66,6 +66,9 @@ namespace octet {
          rigidBody->applyCentralImpulse(centralImpulse);
       }
 
+      void SetLinearVelocity(const btVector3& linearVelocity){
+         rigidBody->setLinearVelocity(linearVelocity);
+      }
       ~Player()
       {
          delete rigidBody;
