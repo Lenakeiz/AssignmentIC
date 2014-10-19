@@ -11,7 +11,7 @@ namespace octet {
   /// Scene using bullet for physics effects.
    class example_physics : public app {
       
-      const int num_players = 2;
+      const int num_players = 4;
       
       // scene for drawing box
       ref<visual_scene> app_scene;
@@ -64,16 +64,16 @@ namespace octet {
          btVector3 physics_vector(0, 0, 0);
 
          if (is_key_down('W')){
-            physics_vector += (btVector3(0, 0, -20));
+            physics_vector += (btVector3(0, 0, -30));
          }
          if (is_key_down('A')){
-            physics_vector += (btVector3(-20, 0, 0));
+            physics_vector += (btVector3(-30, 0, 0));
          }
          if (is_key_down('S')){
-            physics_vector += (btVector3(0, 0, 20));
+            physics_vector += (btVector3(0, 0, 30));
          }
          if (is_key_down('D')){
-            physics_vector += (btVector3(20, 0, 0));
+            physics_vector += (btVector3(30, 0, 0));
          }
 
          players[0]->ApplyCentralForce(physics_vector);
@@ -81,19 +81,19 @@ namespace octet {
          physics_vector = btVector3(0,0,0);
 
          if (is_key_down(key_up)){
-            physics_vector += btVector3(0, 0, -60);
+            physics_vector += btVector3(0, 0, -30);
             //players[1]->ApplyCentralForce(btVector3(0, 0, -60));
          }
          if (is_key_down(key_left)){
-            physics_vector += btVector3(-60, 0, 0);
+            physics_vector += btVector3(-30, 0, 0);
             //players[1]->ApplyCentralForce(btVector3(-60, 0, 0));
          }
          if (is_key_down(key_down)){
-            physics_vector += btVector3(0, 0, 60);
+            physics_vector += btVector3(0, 0, 30);
             //players[1]->ApplyCentralForce(btVector3(0, 0, 60));
          }
          if (is_key_down(key_right)){
-            physics_vector += btVector3(60, 0, 0);
+            physics_vector += btVector3(30, 0, 0);
             //players[1]->ApplyCentralForce(btVector3(60, 0, 0));
          }
 
@@ -130,7 +130,8 @@ namespace octet {
             scenecameranode->access_nodeToParent().translate(0,20,20);
             world->setGravity(btVector3(0,-40,0)); //To prevent strange behaviour on the collisions (on over the other)
             // add the ground (as a static object)
-            board = new Board(20.0f,2.0f);
+            btScalar boardDiamater = 20.0f;
+            board = new Board(boardDiamater, 2.0f);
             world->addRigidBody(board->GetRigidBody());
             rigid_bodies.push_back(board->GetRigidBody());
             nodes.push_back(board->GetNode());
@@ -139,7 +140,7 @@ namespace octet {
 
             for (int i = 0; i < num_players; i++)
             {
-               Player *player = new Player(2.0f, 1.0f, (Color)i);
+               Player *player = new Player(2.0f, 1.0f, (Color)i, boardDiamater); // need to add board diamater to calculate the initial position of the player
                world->addRigidBody(player->GetRigidBody());
                rigid_bodies.push_back(player->GetRigidBody());
                nodes.push_back(player->GetNode());
@@ -153,11 +154,14 @@ namespace octet {
          /// this is called to draw the world
          void draw_world(int x, int y, int w, int h) {
             
-            world->stepSimulation(1.0f/60);
+            world->stepSimulation(1.0f/30);            
 
-            acquireInputs();
+            for (unsigned i = 0; i != players.size(); i++)
+            {
+               players[i]->SetObjectToTheWorld();
+            }
 
-            for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
+            /*for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
                btRigidBody *rigid_body = rigid_bodies[i];
                btQuaternion btq = rigid_body->getOrientation();
                btVector3 pos = rigid_body->getCenterOfMassPosition();
@@ -165,8 +169,9 @@ namespace octet {
                mat4t modelToWorld = q;
                modelToWorld[3] = vec4(pos[0], pos[1], pos[2], 1);
                nodes[i]->access_nodeToParent() = modelToWorld;
-            }
+            }*/
 
+            acquireInputs();
             // update matrices. assume 30 fps.
             app_scene->update(1.0f/30);
 
