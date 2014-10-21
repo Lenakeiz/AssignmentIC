@@ -4,14 +4,22 @@
 //
 // Modular Framework for OpenGLES2 rendering on multiple platforms.
 //
+#pragma once
 #include "Player.h"
 #include "Board.h"
 
 namespace octet {
   /// Scene using bullet for physics effects.
+   static const char keyboardset[16] = { 'W', 'A', 'S', 'D',
+      key_up, key_left, key_down, key_right,
+      'T', 'F', 'G', 'H',
+      'I', 'J', 'K', 'L' };
+
    class example_physics : public app {
       
       const int num_players = 4;
+      enum {MaxPLayers = 4};
+      //static const char keyboardset[MaxPLayers * 4];
       
       // scene for drawing box
       ref<visual_scene> app_scene;
@@ -25,6 +33,7 @@ namespace octet {
       dynarray<btRigidBody*> rigid_bodies;
       dynarray<scene_node*> nodes;
       dynarray<btUniversalConstraint*> constraints;
+      
       //Chuck: adding array for players currently playing and board
       dynarray<Player*> players;
       Board *board;
@@ -61,46 +70,50 @@ namespace octet {
 
       void acquireInputs(){
 
-         btVector3 physics_vector(0, 0, 0);
+         
+         for (unsigned i = 0; i < players.size(); i++)
+         {
+            btVector3 physics_vector(0, 0, 0);
+            if (is_key_down(keyboardset[4 * i])){
+               physics_vector += (btVector3(0, 0, -30));
+            }
+            if (is_key_down(keyboardset[4 * i + 1])){
+               physics_vector += (btVector3(-30, 0, 0));
+            }
+            if (is_key_down(keyboardset[4 * i + 2])){
+               physics_vector += (btVector3(0, 0, 30));
+            }
+            if (is_key_down(keyboardset[4 * i + 3])){
+               physics_vector += (btVector3(30, 0, 0));
+            }
+            players[i]->ApplyCentralForce(physics_vector);
+         }        
 
-         if (is_key_down('W')){
-            physics_vector += (btVector3(0, 0, -30));
-         }
-         if (is_key_down('A')){
-            physics_vector += (btVector3(-30, 0, 0));
-         }
-         if (is_key_down('S')){
-            physics_vector += (btVector3(0, 0, 30));
-         }
-         if (is_key_down('D')){
-            physics_vector += (btVector3(30, 0, 0));
-         }
+         //
+         //players[1]->ApplyCentralForce(physics_vector);
+         //players[2]->ApplyCentralForce(physics_vector);
+         //players[3]->ApplyCentralForce(physics_vector);
 
-         players[0]->ApplyCentralForce(physics_vector);
-         players[1]->ApplyCentralForce(physics_vector);
-         players[2]->ApplyCentralForce(physics_vector);
-         players[3]->ApplyCentralForce(physics_vector);
+         //physics_vector = btVector3(0,0,0);
 
-         physics_vector = btVector3(0,0,0);
+         //if (is_key_down(key_up)){
+         //   physics_vector += btVector3(0, 0, -30);
+         //   //players[1]->ApplyCentralForce(btVector3(0, 0, -60));
+         //}
+         //if (is_key_down(key_left)){
+         //   physics_vector += btVector3(-30, 0, 0);
+         //   //players[1]->ApplyCentralForce(btVector3(-60, 0, 0));
+         //}
+         //if (is_key_down(key_down)){
+         //   physics_vector += btVector3(0, 0, 30);
+         //   //players[1]->ApplyCentralForce(btVector3(0, 0, 60));
+         //}
+         //if (is_key_down(key_right)){
+         //   physics_vector += btVector3(30, 0, 0);
+         //   //players[1]->ApplyCentralForce(btVector3(60, 0, 0));
+         //}
 
-         if (is_key_down(key_up)){
-            physics_vector += btVector3(0, 0, -30);
-            //players[1]->ApplyCentralForce(btVector3(0, 0, -60));
-         }
-         if (is_key_down(key_left)){
-            physics_vector += btVector3(-30, 0, 0);
-            //players[1]->ApplyCentralForce(btVector3(-60, 0, 0));
-         }
-         if (is_key_down(key_down)){
-            physics_vector += btVector3(0, 0, 30);
-            //players[1]->ApplyCentralForce(btVector3(0, 0, 60));
-         }
-         if (is_key_down(key_right)){
-            physics_vector += btVector3(30, 0, 0);
-            //players[1]->ApplyCentralForce(btVector3(60, 0, 0));
-         }
-
-         players[1]->ApplyCentralForce(physics_vector);
+         //players[1]->ApplyCentralForce(physics_vector);
 
       }
    
@@ -111,6 +124,12 @@ namespace octet {
          broadphase = new btDbvtBroadphase();
          solver = new btSequentialImpulseConstraintSolver();
          world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
+         
+         /*keyboardset = { 'W', 'A', 'S', 'D',
+            key_up, key_left, key_down, key_right,
+            'T', 'F', 'G', 'H',
+            'I', 'J', 'K', 'L' };*/
+
          }
 
          ~example_physics() {
@@ -185,8 +204,8 @@ namespace octet {
                world->addConstraint(constr);
                constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 20, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 20 ));
                constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 20, 100, boardRadius - (playerCOM.getZ()) + 20));
-               constr->setAngularLowerLimit(btVector3(0, 0, 0));
-               constr->setAngularUpperLimit(btVector3(0, 0, 0));
+               //constr->setAngularLowerLimit(btVector3(0, 0, 0));
+               //constr->setAngularUpperLimit(btVector3(0, 0, 0));
 
                rigid_bodies.push_back(player->GetRigidBody());
                nodes.push_back(player->GetNode());
