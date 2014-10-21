@@ -30,9 +30,9 @@ namespace octet {
       btSequentialImpulseConstraintSolver *solver;  /// handler to resolve collisions
       btDiscreteDynamicsWorld *world;               /// physics world, contains rigid bodies
 
-      dynarray<btRigidBody*> rigid_bodies;
-      dynarray<scene_node*> nodes;
-      dynarray<btUniversalConstraint*> constraints;
+      //dynarray<btRigidBody*> rigid_bodies;
+      //dynarray<scene_node*> nodes;
+      //dynarray<btUniversalConstraint*> constraints;
       
       //Chuck: adding array for players currently playing and board
       dynarray<Player*> players;
@@ -57,19 +57,61 @@ namespace octet {
 
          btRigidBody *rigidBody = new btRigidBody(mass, motion, shape, inertia);
          world->addRigidBody(rigidBody);
-         rigid_bodies.push_back(rigidBody);
+         //rigid_bodies.push_back(rigidBody);
 
          mesh_sphere *meshsphere = new mesh_sphere(vec3(0, 0, 0), size);
          scene_node *node = new scene_node(modelToWorld, atom_);
-         nodes.push_back(node);
+         //nodes.push_back(node);
 
          app_scene->add_child(node);
          app_scene->add_mesh_instance(new mesh_instance(node, meshsphere, mat));
 
       }
 
+      void InitPhysics(){
+         dispatcher = new btCollisionDispatcher(&config);
+         broadphase = new btDbvtBroadphase();
+         solver = new btSequentialImpulseConstraintSolver();
+         world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
+      }
+
+      void ResetPhysics(){
+
+         int i;
+         for (i = world->getNumConstraints()-1; i >= 0; i--)
+         {
+            btTypedConstraint* constr = world->getConstraint(i);
+            world->removeConstraint(constr);
+            delete constr;
+         }
+         
+         for ( i = world->getNumCollisionObjects()-1; i >= 0; i--)
+         {
+            btCollisionObject* obj = world->getCollisionObjectArray()[i];
+            btRigidBody* rigidBody = btRigidBody::upcast(obj);
+            if (rigidBody && rigidBody->getMotionState()){
+               delete rigidBody->getMotionState();
+            }
+            world->removeCollisionObject(obj);
+            delete obj;
+         }
+
+         players.reset();
+
+         delete world;
+         delete solver;
+         delete broadphase;
+         delete dispatcher;
+      }
+
       void acquireInputs(){
 
+         if (is_key_down(key_space))
+         {
+            ResetPhysics();
+            InitPhysics();
+            app_init();
+         }
          
          for (unsigned i = 0; i < players.size(); i++)
          {
@@ -120,10 +162,8 @@ namespace octet {
       public:
          /// this is called when we construct the class before everything is initialised.
          example_physics(int argc, char **argv) : app(argc, argv) {
-         dispatcher = new btCollisionDispatcher(&config);
-         broadphase = new btDbvtBroadphase();
-         solver = new btSequentialImpulseConstraintSolver();
-         world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
+         
+            InitPhysics();
          
          /*keyboardset = { 'W', 'A', 'S', 'D',
             key_up, key_left, key_down, key_right,
@@ -133,10 +173,9 @@ namespace octet {
          }
 
          ~example_physics() {
-         delete world;
-         delete solver;
-         delete broadphase;
-         delete dispatcher;
+         
+            ResetPhysics();
+
          }
 
          /// this is called once OpenGL is initialized
@@ -159,8 +198,8 @@ namespace octet {
 
             board = new Board(boardRadius, boardhalfheight);
             world->addRigidBody(board->GetRigidBody());
-            rigid_bodies.push_back(board->GetRigidBody());
-            nodes.push_back(board->GetNode());
+            //rigid_bodies.push_back(board->GetRigidBody());
+            //nodes.push_back(board->GetNode());
             app_scene->add_child(board->GetNode());
             app_scene->add_mesh_instance(board->GetMesh());
 
@@ -204,11 +243,11 @@ namespace octet {
                world->addConstraint(constr);
                constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 20, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 20 ));
                constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 20, 100, boardRadius - (playerCOM.getZ()) + 20));
-               //constr->setAngularLowerLimit(btVector3(0, 0, 0));
-               //constr->setAngularUpperLimit(btVector3(0, 0, 0));
+               constr->setAngularLowerLimit(btVector3(0, 0, 0));
+               constr->setAngularUpperLimit(btVector3(0, 0, 0));
 
-               rigid_bodies.push_back(player->GetRigidBody());
-               nodes.push_back(player->GetNode());
+               //rigid_bodies.push_back(player->GetRigidBody());
+               //nodes.push_back(player->GetNode());
                app_scene->add_child(player->GetNode());
                app_scene->add_mesh_instance(player->GetMesh());
                players.push_back(player);

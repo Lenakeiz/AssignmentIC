@@ -27,28 +27,6 @@ namespace octet {
 
          this->mat = &material;
 
-         //mat4t modelToWorld;
-         //modelToWorld.loadIdentity();
-         
-        /* switch (color) {
-            case Color::RED: 
-               mat = new material(vec4(1, 0, 0, 1));
-               modelToWorld.translate(-(arenaExtension * 0.5f), 10.0f, 0);
-               break;
-            case Color::GREEN: 
-               mat = new material(vec4(0, 1, 0, 1));
-               modelToWorld.translate(arenaExtension * 0.5f, 10.0f, 0);
-               break;
-            case Color::BLUE:
-               mat = new material(vec4(0, 0, 1, 1));
-               modelToWorld.translate(0, 10.0f, arenaExtension * 0.5f);
-               break;
-            case Color::YELLOW:
-               mat = new material(vec4(1, 1, 0, 1));
-               modelToWorld.translate(0, 10.0f, -(arenaExtension * 0.5f));
-               break;
-         }*/
-
          //Creating default rigidbody
          btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
@@ -64,7 +42,6 @@ namespace octet {
 
          //prevent body from deactivating
          rigidBody->setActivationState(DISABLE_DEACTIVATION);
-         rigidBody->getRestitution();
          rigidBody->setRestitution(1);
          //Creating node to draw with mesh (cylinder mesh is created along z axis: scale and rotate)
          mat4t position;
