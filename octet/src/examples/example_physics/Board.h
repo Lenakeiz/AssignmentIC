@@ -14,7 +14,7 @@ namespace octet{
    public:
 
    
-      Board(btScalar diameter, btScalar height)
+      Board(btScalar radius, btScalar height)
       {
          current_tilt = 0;
          //Assigning material
@@ -23,7 +23,7 @@ namespace octet{
          //Creating default rigidbody
          mat4t modelToWorld;
          modelToWorld.loadIdentity();
-         btCollisionShape *shape = new btCylinderShape(btVector3(diameter, height * 0.5f, diameter));
+         btCollisionShape *shape = new btCylinderShape(btVector3(radius, height, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
          btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
          btTransform transform(matrix, pos);
@@ -38,7 +38,7 @@ namespace octet{
          //Creating node to draw with mesh
          mat4t position;
          position.loadIdentity();
-         position.scale(diameter, height * 0.5f, diameter);
+         position.scale(radius, height * 0.5f, radius);
          position.rotate(90, 1, 0, 0);
          mesh_cylinder* meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);

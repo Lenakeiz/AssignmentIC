@@ -24,7 +24,7 @@ namespace octet {
 
       dynarray<btRigidBody*> rigid_bodies;
       dynarray<scene_node*> nodes;
-    
+      dynarray<btUniversalConstraint*> constraints;
       //Chuck: adding array for players currently playing and board
       dynarray<Player*> players;
       Board *board;
@@ -77,7 +77,10 @@ namespace octet {
          }
 
          players[0]->ApplyCentralForce(physics_vector);
-         
+         players[1]->ApplyCentralForce(physics_vector);
+         players[2]->ApplyCentralForce(physics_vector);
+         players[3]->ApplyCentralForce(physics_vector);
+
          physics_vector = btVector3(0,0,0);
 
          if (is_key_down(key_up)){
@@ -130,8 +133,12 @@ namespace octet {
             scenecameranode->access_nodeToParent().translate(0,20,20);
             world->setGravity(btVector3(0,-40,0)); //To prevent strange behaviour on the collisions (on over the other)
             // add the ground (as a static object)
-            btScalar boardDiamater = 20.0f;
-            board = new Board(boardDiamater, 2.0f);
+            btScalar boardRadius = 20.0f;
+            btScalar boardhalfheight = 0.5f;
+            mat4t modelToWorld;
+            modelToWorld.loadIdentity();
+
+            board = new Board(boardRadius, boardhalfheight);
             world->addRigidBody(board->GetRigidBody());
             rigid_bodies.push_back(board->GetRigidBody());
             nodes.push_back(board->GetNode());
@@ -140,8 +147,47 @@ namespace octet {
 
             for (int i = 0; i < num_players; i++)
             {
-               Player *player = new Player(2.0f, 1.0f, (Color)i, boardDiamater); // need to add board diamater to calculate the initial position of the player
+               material* mat;
+               modelToWorld.loadIdentity();
+
+               switch ((Color)i)
+               {
+               case Color::RED:
+                  mat = new material(vec4(1, 0, 0, 1));
+                  modelToWorld.translate(-(boardRadius * 0.5f), 10.0f, -0);
+                  break;
+               case Color::GREEN:
+                  mat = new material(vec4(0, 1, 0, 1));
+                  modelToWorld.translate(boardRadius * 0.5f, 10.0f, 0);
+                  break;
+               case Color::BLUE:
+                  mat = new material(vec4(0, 0, 1, 1));
+                  modelToWorld.translate(0, 10.0f, boardRadius * 0.5f);
+                  break;
+               case Color::YELLOW:
+                  mat = new material(vec4(1, 1, 0, 1));
+                  modelToWorld.translate(0, 10.0f, -(boardRadius * 0.5f));
+                  break;
+                  default:
+                     break;
+               }
+
+               Player *player = new Player(2.0f, 0.5f, *mat, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               
                world->addRigidBody(player->GetRigidBody());
+               
+               btTransform localConstr;
+               localConstr.setIdentity();
+               btVector3 playerCOM = player->GetRigidBody()->getCenterOfMassPosition();               
+               //localConstr.setOrigin(btVector3(-(playerCOM.getX()), -(playerCOM.getY()), -(playerCOM.getZ())));
+               btGeneric6DofConstraint* constr = new btGeneric6DofConstraint((*player->GetRigidBody()), localConstr, true);//(*player->GetRigidBody()),*board->GetRigidBody(), localConstr, localConstr2, false
+                              
+               world->addConstraint(constr);
+               constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 20, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 20 ));
+               constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 20, 100, boardRadius - (playerCOM.getZ()) + 20));
+               constr->setAngularLowerLimit(btVector3(0, 0, 0));
+               constr->setAngularUpperLimit(btVector3(0, 0, 0));
+
                rigid_bodies.push_back(player->GetRigidBody());
                nodes.push_back(player->GetNode());
                app_scene->add_child(player->GetNode());

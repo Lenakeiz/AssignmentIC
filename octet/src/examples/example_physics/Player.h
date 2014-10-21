@@ -20,34 +20,37 @@ namespace octet {
       btRigidBody* rigidBody; //Try implementing an non invasive (smart) pointer -- effective c++ 
    public:
    
-      Player(btScalar diameter, btScalar height, Color color, btScalar arenaExtension, int n = 4)
+      Player(btScalar radius, btScalar halfheight, material& material, const mat4t& modelToWorld, int n = 4)
       {
          lifes = n;
          mass = 0.5f;
 
-         mat4t modelToWorld;
+         this->mat = &material;
+
+         //mat4t modelToWorld;
+         //modelToWorld.loadIdentity();
          
-         switch (color) {
+        /* switch (color) {
             case Color::RED: 
                mat = new material(vec4(1, 0, 0, 1));
-               modelToWorld.translate(-(arenaExtension * 0.5f), 0, 0);
+               modelToWorld.translate(-(arenaExtension * 0.5f), 10.0f, 0);
                break;
             case Color::GREEN: 
                mat = new material(vec4(0, 1, 0, 1));
-               modelToWorld.translate(arenaExtension * 0.5f, 0, 0);
+               modelToWorld.translate(arenaExtension * 0.5f, 10.0f, 0);
                break;
             case Color::BLUE:
                mat = new material(vec4(0, 0, 1, 1));
-               modelToWorld.translate(0, 0, arenaExtension * 0.5f);
+               modelToWorld.translate(0, 10.0f, arenaExtension * 0.5f);
                break;
             case Color::YELLOW:
                mat = new material(vec4(1, 1, 0, 1));
-               modelToWorld.translate(0, 0, -(arenaExtension * 0.5f));
+               modelToWorld.translate(0, 10.0f, -(arenaExtension * 0.5f));
                break;
-         }
+         }*/
 
          //Creating default rigidbody
-         btCollisionShape *shape = new btCylinderShape(btVector3(diameter, height * 0.5f, diameter));
+         btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
          btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
          btTransform transform(matrix, pos);
@@ -61,11 +64,12 @@ namespace octet {
 
          //prevent body from deactivating
          rigidBody->setActivationState(DISABLE_DEACTIVATION);
-
+         rigidBody->getRestitution();
+         rigidBody->setRestitution(1);
          //Creating node to draw with mesh (cylinder mesh is created along z axis: scale and rotate)
          mat4t position;
          position.loadIdentity();
-         position.scale(diameter, height * 0.5f, diameter);
+         position.scale(radius, halfheight, radius);
          position.rotate(90, 1, 0, 0);
          mesh_cylinder* meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);
