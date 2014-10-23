@@ -12,21 +12,26 @@ namespace octet {
    {
    private:
       int lifes;
+      Color color;
       float mass;
+      bool active;
       ref<material> mat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
       btDefaultMotionState *motion; //Chuck: KEEP ATTENTION HOW RELEASE THIS
-      btRigidBody* rigidBody; //Try implementing an non invasive (smart) pointer -- effective c++ 
+      btRigidBody* rigidBody; //Try implementing an non invasive (smart) pointer -- effective c++
+      btGeneric6DofConstraint* constraint;
+
    public:
    
-      Player(btScalar radius, btScalar halfheight, material& material, const mat4t& modelToWorld, int n = 4)
+      Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, int n = 4)
       {
          lifes = n;
+         active = true;
          mass = 0.5f;
 
          this->mat = &material;
-
+         this->color = playerColor;
          //Creating default rigidbody
          btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
@@ -52,7 +57,24 @@ namespace octet {
          node = new scene_node(modelToWorld, atom_);
          meshinstance = new mesh_instance(node, meshcylinder, mat);
 
-         //delete shape; //for study
+      }
+
+      const char* GetColor(){
+         switch (this->color){
+         case Color::RED: return "Red"; break;
+         case Color::GREEN: return "Green"; break;
+         case Color::BLUE: return "Blue"; break;
+         case Color::YELLOW: return "Yellow"; break;
+         default: return ""; break;
+         }
+      }
+
+      void SetActive(bool enabled){
+         active=enabled;
+      }
+
+      bool GetActive(){
+         return active;
       }
 
       void ApplyCentralForce(const btVector3& centralForce){
@@ -67,6 +89,14 @@ namespace octet {
          rigidBody->setLinearVelocity(linearVelocity);
       }
 
+      void AddConstraintInfo(btGeneric6DofConstraint* constr){
+         constraint = constr;
+      }
+
+      void SetConstraintEnabled(bool enabled){
+         constraint->setEnabled(enabled);
+      }
+         
       btTransform GetTransform() {
 
          btTransform transform;

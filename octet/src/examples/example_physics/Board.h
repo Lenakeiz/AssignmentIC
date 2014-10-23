@@ -6,6 +6,7 @@ namespace octet{
 
    private:
       int current_tilt;
+      btScalar radius;
       ref<material> mat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
@@ -17,6 +18,7 @@ namespace octet{
       Board(btScalar radius, btScalar height)
       {
          current_tilt = 0;
+         this->radius=radius;
          //Assigning material
          mat = new material(new image("assets/Stone_floor_09.jpg"));
 
@@ -53,6 +55,10 @@ namespace octet{
 
       void Draw(){
       
+      }
+
+      btScalar GetRadius(){
+         return this->radius;
       }
 
       mesh_instance* GetMesh(){

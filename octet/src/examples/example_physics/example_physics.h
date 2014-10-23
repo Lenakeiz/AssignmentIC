@@ -8,6 +8,8 @@
 #include "Player.h"
 #include "Board.h"
 
+#define DEBUG_EN 1
+
 namespace octet {
   /// Scene using bullet for physics effects.
    static const char keyboardset[16] = { 'W', 'A', 'S', 'D',
@@ -30,13 +32,10 @@ namespace octet {
       btSequentialImpulseConstraintSolver *solver;  /// handler to resolve collisions
       btDiscreteDynamicsWorld *world;               /// physics world, contains rigid bodies
 
-      //dynarray<btRigidBody*> rigid_bodies;
-      //dynarray<scene_node*> nodes;
-      //dynarray<btUniversalConstraint*> constraints;
-      
       //Chuck: adding array for players currently playing and board
       dynarray<Player*> players;
       Board *board;
+      
       //Chuck: adding reference to the camera
       scene_node *scenecameranode;
 
@@ -85,7 +84,7 @@ namespace octet {
             delete constr;
          }
          
-         for ( i = world->getNumCollisionObjects()-1; i >= 0; i--)
+         for ( i = world->getNumCollisionObjects() - 1; i >= 0; i--)
          {
             btCollisionObject* obj = world->getCollisionObjectArray()[i];
             btRigidBody* rigidBody = btRigidBody::upcast(obj);
@@ -116,66 +115,72 @@ namespace octet {
          for (unsigned i = 0; i < players.size(); i++)
          {
             btVector3 physics_vector(0, 0, 0);
-            if (is_key_down(keyboardset[4 * i])){
-               physics_vector += (btVector3(0, 0, -30));
-            }
-            if (is_key_down(keyboardset[4 * i + 1])){
-               physics_vector += (btVector3(-30, 0, 0));
-            }
-            if (is_key_down(keyboardset[4 * i + 2])){
-               physics_vector += (btVector3(0, 0, 30));
-            }
-            if (is_key_down(keyboardset[4 * i + 3])){
-               physics_vector += (btVector3(30, 0, 0));
-            }
+            if (players[i]->GetActive()){
+               if (is_key_down(keyboardset[4 * i])){
+                  physics_vector += (btVector3(0, 0, -120));
+               }
+               if (is_key_down(keyboardset[4 * i + 1])){
+                  physics_vector += (btVector3(-120, 0, 0));
+               }
+               if (is_key_down(keyboardset[4 * i + 2])){
+                  physics_vector += (btVector3(0, 0, 120));
+               }
+               if (is_key_down(keyboardset[4 * i + 3])){
+                  physics_vector += (btVector3(120, 0, 0));
+               }
+            }            
             players[i]->ApplyCentralForce(physics_vector);
          }        
-
-         //
-         //players[1]->ApplyCentralForce(physics_vector);
-         //players[2]->ApplyCentralForce(physics_vector);
-         //players[3]->ApplyCentralForce(physics_vector);
-
-         //physics_vector = btVector3(0,0,0);
-
-         //if (is_key_down(key_up)){
-         //   physics_vector += btVector3(0, 0, -30);
-         //   //players[1]->ApplyCentralForce(btVector3(0, 0, -60));
-         //}
-         //if (is_key_down(key_left)){
-         //   physics_vector += btVector3(-30, 0, 0);
-         //   //players[1]->ApplyCentralForce(btVector3(-60, 0, 0));
-         //}
-         //if (is_key_down(key_down)){
-         //   physics_vector += btVector3(0, 0, 30);
-         //   //players[1]->ApplyCentralForce(btVector3(0, 0, 60));
-         //}
-         //if (is_key_down(key_right)){
-         //   physics_vector += btVector3(30, 0, 0);
-         //   //players[1]->ApplyCentralForce(btVector3(60, 0, 0));
-         //}
-
-         //players[1]->ApplyCentralForce(physics_vector);
-
       }
    
+      void checkPLayersStatus(){
+
+         btVector3 boardtrans = board->GetRigidBody()->getCenterOfMassPosition();
+         btVector3 boardtransXZ(boardtrans.getX(),0,boardtrans.getZ());
+         btScalar boardY = boardtrans.getY();
+
+         for (unsigned i = 0; i < players.size(); i++)
+         {
+            btRigidBody* currBody = players[i]->GetRigidBody();
+            //btTransform trans = currBody->getCenterOfMassTransform();
+            btVector3 currPLayer = currBody->getCenterOfMassPosition(); //trans.getOrigin();
+
+            btVector3 currPLayerXZ(currPLayer.getX(), 0, currPLayer.getZ());
+            btScalar playY = currPLayer.getY();
+            
+            btScalar distanceToBoard = currPLayerXZ.distance(boardtransXZ);
+            btScalar boardRadius = board->GetRadius();
+
+            btScalar lower_offset = 0.2;
+            btScalar upper_offset = 0.5;
+
+            if (players[i]->GetActive() == true){
+               if (distanceToBoard >= boardRadius + upper_offset || math::abs(playY - boardY) > 1.0 + 1.0 + upper_offset + 0.5){
+                  players[i]->SetActive(false);
+                  if (DEBUG_EN){
+                     printf("Player %s false \n", players[i]->GetColor());
+                  } 
+               }
+            }
+            else{
+               if ((math::abs(playY - boardY) <= 1.0 + 1.0 + lower_offset) && distanceToBoard <= board->GetRadius() + lower_offset){
+                  players[i]->SetActive(true);
+                  if (DEBUG_EN){
+                     printf("Player %s true \n", players[i]->GetColor());
+                  }
+               }
+            }
+         }
+      }
+
       public:
          /// this is called when we construct the class before everything is initialised.
-         example_physics(int argc, char **argv) : app(argc, argv) {
-         
+         example_physics(int argc, char **argv) : app(argc, argv) {         
             InitPhysics();
-         
-         /*keyboardset = { 'W', 'A', 'S', 'D',
-            key_up, key_left, key_down, key_right,
-            'T', 'F', 'G', 'H',
-            'I', 'J', 'K', 'L' };*/
-
          }
 
-         ~example_physics() {
-         
+         ~example_physics() {         
             ResetPhysics();
-
          }
 
          /// this is called once OpenGL is initialized
@@ -186,20 +191,36 @@ namespace octet {
             app_scene->create_default_camera_and_lights();
             scenecameranode = app_scene->get_camera_instance(0)->get_node();
 
+            btScalar boardRadius = 40.0f;
+            btScalar boardhalfheight = 1.0f;
+
             //Chuck: camera is fixed, changing the parameters in order to have camera looking at the platform along Z-axis
             scenecameranode->access_nodeToParent().rotateX(-30);
-            scenecameranode->access_nodeToParent().translate(0,20,20);
+            scenecameranode->access_nodeToParent().translate(0, 20, boardRadius * 2);
             world->setGravity(btVector3(0,-40,0)); //To prevent strange behaviour on the collisions (on over the other)
             // add the ground (as a static object)
-            btScalar boardRadius = 20.0f;
-            btScalar boardhalfheight = 0.5f;
+
             mat4t modelToWorld;
             modelToWorld.loadIdentity();
 
             board = new Board(boardRadius, boardhalfheight);
             world->addRigidBody(board->GetRigidBody());
-            //rigid_bodies.push_back(board->GetRigidBody());
-            //nodes.push_back(board->GetNode());
+
+            modelToWorld.loadIdentity();
+            btCollisionShape *shape = new btBoxShape(btVector3(boardRadius * 2, boardhalfheight * 0.5, boardRadius * 2));
+            btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
+            btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
+            btTransform transform(matrix, pos);
+            btDefaultMotionState *motion = new btDefaultMotionState(transform);
+
+            //Calculate inertia for the body
+            btVector3 inertia;
+            shape->calculateLocalInertia(0.0f, inertia);
+            //Saving rigid body 
+            btRigidBody *deadBox = new btRigidBody(0.0f, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
+
+            //world->addRigidBody(deadBox);
+
             app_scene->add_child(board->GetNode());
             app_scene->add_mesh_instance(board->GetMesh());
 
@@ -207,30 +228,30 @@ namespace octet {
             {
                material* mat;
                modelToWorld.loadIdentity();
-
+               
                switch ((Color)i)
                {
                case Color::RED:
                   mat = new material(vec4(1, 0, 0, 1));
-                  modelToWorld.translate(-(boardRadius * 0.5f), 10.0f, -0);
+                  modelToWorld.translate(-(boardRadius * 0.5f), boardhalfheight * 2, -0);
                   break;
                case Color::GREEN:
                   mat = new material(vec4(0, 1, 0, 1));
-                  modelToWorld.translate(boardRadius * 0.5f, 10.0f, 0);
+                  modelToWorld.translate(boardRadius * 0.5f, boardhalfheight * 2, 0);
                   break;
                case Color::BLUE:
                   mat = new material(vec4(0, 0, 1, 1));
-                  modelToWorld.translate(0, 10.0f, boardRadius * 0.5f);
+                  modelToWorld.translate(0, boardhalfheight * 2, boardRadius * 0.5f);
                   break;
                case Color::YELLOW:
                   mat = new material(vec4(1, 1, 0, 1));
-                  modelToWorld.translate(0, 10.0f, -(boardRadius * 0.5f));
+                  modelToWorld.translate(0, boardhalfheight * 2, -(boardRadius * 0.5f));
                   break;
                   default:
                      break;
                }
 
-               Player *player = new Player(2.0f, 0.5f, *mat, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               Player *player = new Player(2.0f, 1.0f, *mat, (Color)i, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
                
                world->addRigidBody(player->GetRigidBody());
                
@@ -241,13 +262,13 @@ namespace octet {
                btGeneric6DofConstraint* constr = new btGeneric6DofConstraint((*player->GetRigidBody()), localConstr, true);//(*player->GetRigidBody()),*board->GetRigidBody(), localConstr, localConstr2, false
                               
                world->addConstraint(constr);
-               constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 20, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 20 ));
-               constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 20, 100, boardRadius - (playerCOM.getZ()) + 20));
-               constr->setAngularLowerLimit(btVector3(0, 0, 0));
-               constr->setAngularUpperLimit(btVector3(0, 0, 0));
-
-               //rigid_bodies.push_back(player->GetRigidBody());
-               //nodes.push_back(player->GetNode());
+               constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 200, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 200 ));
+               constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 200, 10, boardRadius - (playerCOM.getZ()) + 200));
+               constr->setAngularLowerLimit(btVector3(-SIMD_PI * 0.25, 0, -SIMD_PI * 0.25));
+               constr->setAngularUpperLimit(btVector3(SIMD_PI * 0.25, 0, SIMD_PI * 0.25));
+               //constr->setAngularLowerLimit(btVector3(0, 0, 0));
+               //constr->setAngularUpperLimit(btVector3(0, 0, 0));
+               
                app_scene->add_child(player->GetNode());
                app_scene->add_mesh_instance(player->GetMesh());
                players.push_back(player);
@@ -275,6 +296,7 @@ namespace octet {
                nodes[i]->access_nodeToParent() = modelToWorld;
             }*/
 
+            checkPLayersStatus();
             acquireInputs();
             // update matrices. assume 30 fps.
             app_scene->update(1.0f/30);
@@ -283,7 +305,6 @@ namespace octet {
 
             get_viewport_size(vx, vy);
             app_scene->begin_render(vx, vy);
-
             
             // draw the scene
             app_scene->render((float)vx / vy);
