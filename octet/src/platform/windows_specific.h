@@ -195,6 +195,11 @@ namespace octet {
       UpdateWindow (window_handle);
     }
 
+    //Chuck: sorry for this
+    HWND getHWND(){ 
+      return window_handle; 
+    }
+
     void render() {
       HDC hdc = GetDC(window_handle);
       wglMakeCurrent (hdc, gl_context);

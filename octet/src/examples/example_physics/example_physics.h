@@ -5,10 +5,11 @@
 // Modular Framework for OpenGLES2 rendering on multiple platforms.
 //
 #pragma once
+#define DEBUG_EN 1
 #include "Player.h"
 #include "Board.h"
+#include "Joystick.h"
 
-#define DEBUG_EN 1
 
 namespace octet {
   /// Scene using bullet for physics effects.
@@ -18,10 +19,13 @@ namespace octet {
       'I', 'J', 'K', 'L' };
 
    class example_physics : public app {
-      
+   
+      Joystick* joystick;
+
       const int num_players = 4;
       enum {MaxPLayers = 4};
       //static const char keyboardset[MaxPLayers * 4];
+
       
       // scene for drawing box
       ref<visual_scene> app_scene;
@@ -191,6 +195,9 @@ namespace octet {
             app_scene->create_default_camera_and_lights();
             scenecameranode = app_scene->get_camera_instance(0)->get_node();
 
+            joystick = new Joystick();
+            joystick->InitInputDevice(this);
+            
             btScalar boardRadius = 40.0f;
             btScalar boardhalfheight = 1.0f;
 
