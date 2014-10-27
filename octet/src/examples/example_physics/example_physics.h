@@ -20,9 +20,9 @@ namespace octet {
 
    class example_physics : public app {
    
-      Joystick* joystick;
+      Joystick* joystick = nullptr;
 
-      const int num_players = 4;
+      int num_players;
       enum {MaxPLayers = 4};
       //static const char keyboardset[MaxPLayers * 4];
 
@@ -134,7 +134,12 @@ namespace octet {
                }
             }            
             players[i]->ApplyCentralForce(physics_vector);
-         }        
+         }
+         
+         //just for player zero we take input from controller
+         btVector3 joyInput = joystick->AcquireInputData();
+         players[0]->ApplyCentralForce(joyInput);
+                 
       }
    
       void checkPLayersStatus(){
@@ -190,13 +195,17 @@ namespace octet {
          /// this is called once OpenGL is initialized
          void app_init() {
 
+            num_players = 4;
+
             app_scene =  new visual_scene();
 
             app_scene->create_default_camera_and_lights();
             scenecameranode = app_scene->get_camera_instance(0)->get_node();
-
-            joystick = new Joystick();
-            joystick->InitInputDevice(this);
+            
+            if (!joystick){
+               joystick = new Joystick();
+               joystick->InitInputDevice(this);
+            }            
             
             btScalar boardRadius = 40.0f;
             btScalar boardhalfheight = 1.0f;
@@ -286,7 +295,9 @@ namespace octet {
          /// this is called to draw the world
          void draw_world(int x, int y, int w, int h) {
             
-            world->stepSimulation(1.0f/30);            
+            world->stepSimulation(1.0f/60);            
+            checkPLayersStatus();
+            acquireInputs();
 
             for (unsigned i = 0; i != players.size(); i++)
             {
@@ -303,8 +314,6 @@ namespace octet {
                nodes[i]->access_nodeToParent() = modelToWorld;
             }*/
 
-            checkPLayersStatus();
-            acquireInputs();
             // update matrices. assume 30 fps.
             app_scene->update(1.0f/30);
 
