@@ -20,7 +20,7 @@ namespace octet{
          current_tilt = 0;
          this->radius=radius;
          //Assigning material
-         mat = new material(new image("assets/Stone_floor_09.jpg"));
+         mat = new material(new image("assets/Stone_floor_09.gif"));
 
          //Creating default rigidbody
          mat4t modelToWorld;

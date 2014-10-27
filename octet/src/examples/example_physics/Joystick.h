@@ -1,10 +1,6 @@
 #pragma once
-//#define STRICT
 #define DIRECTINPUT_VERSION 0x0800
-//#define _CRT_SECURE_NO_DEPRECATE
-//#ifndef _WIN32_DCOM
-//#define _WIN32_DCOM
-//#endif
+
 #include <guiddef.h>
 #include <dinput.h>
 #include <dinputd.h>
@@ -32,8 +28,8 @@ namespace octet{
 
          ~Joystick()
          {
-            delete directInput;
-            delete joystick;
+            //delete directInput;
+            //delete joystick;
          }
 
          //Chuck: Callback function of EnumDevices; called everytime direct input found a device (filtered),
@@ -58,17 +54,24 @@ namespace octet{
 
             auto context = reinterpret_cast<Joystick*>(pContext);
 
-            DIPROPRANGE diprg;
-            diprg.diph.dwSize = sizeof(DIPROPRANGE);
-            diprg.diph.dwHeaderSize = sizeof(DIPROPHEADER);
-            diprg.diph.dwHow = DIPH_BYID;
-            diprg.diph.dwObj = didoi->dwType; // Specify the enumerated axis
-            diprg.lMin = -140;
-            diprg.lMax = +140;
-            
-            // Set the range for the axis
-            if (FAILED(context->joystick->SetProperty(DIPROP_RANGE, &diprg.diph)))
-               return DIENUM_STOP;
+            if (didoi->dwType & DIDFT_AXIS){
+
+               DIPROPRANGE diprg;
+               diprg.diph.dwSize = sizeof(DIPROPRANGE);
+               diprg.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+               diprg.diph.dwHow = DIPH_BYID;
+               diprg.diph.dwObj = didoi->dwType; // Specify the enumerated axis
+               diprg.lMin = -100;
+               diprg.lMax = +100;
+
+               // Set the range for the axis
+               if (FAILED(context->joystick->SetProperty(DIPROP_RANGE, &diprg.diph)))
+                  return DIENUM_STOP;
+               
+            }
+
+            return DIENUM_CONTINUE;
+
          }
 
          void InitInputDevice(app* ap)
@@ -115,13 +118,19 @@ namespace octet{
             //Chuck: Releasing the pointer (safe mode)
             if (pJoyConfig) { (pJoyConfig)->Release(); (pJoyConfig) = nullptr; }
             //DI8DEVCLASS_GAMECTRL
-            hr = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, Joystick::EnumJoystickCallback, this, DIEDFL_ATTACHEDONLY); //Chuck: callback function for any detected devices, passing enumcontext parameter 
+            hr = directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, Joystick::EnumJoystickCallback, (VOID*)this, DIEDFL_ATTACHEDONLY); //Chuck: callback function for any detected devices, passing enumcontext parameter 
             if (FAILED(hr))
             {
                if (DEBUG_EN){
                   printf("Joystick not found\n");
                }
                assert(0);
+            }
+
+            //Chuck: check current joystick existence, it avooids calling the set data format before the callback.
+            if (!joystick)
+            {
+               return;
             }
 
             hr = joystick->SetDataFormat(&c_dfDIJoystick); //Chuck: specify what kind of structure we will have when using ::GetDeviceState
@@ -136,7 +145,7 @@ namespace octet{
                assert(0);
 
             //Chuck: enumerate the joystick objects. In callback we set range for the values.
-            hr = joystick->EnumObjects(EnumObjectsCallback, this, DIDFT_AXIS);
+            hr = joystick->EnumObjects(Joystick::EnumObjectsCallback, (VOID*) this, DIDFT_AXIS);
             if (FAILED(hr)){
                if (DEBUG_EN){
                   printf("Failed on enumerating joystick objects\n");
@@ -144,14 +153,6 @@ namespace octet{
                assert(0);
             } 
 
-            //Chuck: need to move on the callback function
-            /*hr = directInput->CreateDevice(GUID_Joystick, &joystick, NULL);
-            if (FAILED(hr))
-            {
-               assert(0);
-            }*/
-
-            //return dI;
          }
 
          btVector3 AcquireInputData(){
@@ -182,8 +183,20 @@ namespace octet{
                return btVector3(0, 0, 0);
             }
 
-            return btVector3(js.lX - 32767, 0, js.lY - 32767);
+            return btVector3(js.lX, 0, js.lY);
          
+         }
+
+         void ShutDown()
+         {
+            if (joystick != nullptr){
+               joystick->Unacquire();
+               joystick->Release();
+            }
+
+            if (!directInput){
+               directInput->Release();
+            }
          }
 
    };

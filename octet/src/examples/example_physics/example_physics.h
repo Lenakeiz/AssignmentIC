@@ -24,6 +24,7 @@ namespace octet {
 
       int num_players;
       enum {MaxPLayers = 4};
+      const int gravity = -120;
       //static const char keyboardset[MaxPLayers * 4];
 
       
@@ -37,11 +38,12 @@ namespace octet {
       btDiscreteDynamicsWorld *world;               /// physics world, contains rigid bodies
 
       //Chuck: adding array for players currently playing and board
+      ref<mesh_instance> background;
       dynarray<Player*> players;
       Board *board;
       
       //Chuck: adding reference to the camera
-      scene_node *scenecameranode;
+      camera_instance *scenecamera;
 
       void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
 
@@ -76,6 +78,7 @@ namespace octet {
          broadphase = new btDbvtBroadphase();
          solver = new btSequentialImpulseConstraintSolver();
          world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
+         world->setGravity(btVector3(0, gravity, 0)); //To prevent strange behaviour on the collisions (one over the other)
       }
 
       void ResetPhysics(){
@@ -109,10 +112,14 @@ namespace octet {
 
       void acquireInputs(){
 
+         if (is_key_down(key_esc)) exit(1);
+
          if (is_key_down(key_space))
          {
             ResetPhysics();
             InitPhysics();
+            joystick->ShutDown();
+            delete joystick;
             app_init();
          }
          
@@ -164,7 +171,7 @@ namespace octet {
             btScalar upper_offset = 0.5;
 
             if (players[i]->GetActive() == true){
-               if (distanceToBoard >= boardRadius + upper_offset || math::abs(playY - boardY) > 1.0 + 1.0 + upper_offset + 0.5){
+               if (distanceToBoard >= boardRadius + upper_offset || math::abs(playY - boardY) > 2.0 + 1.0 + upper_offset + 0.5){
                   players[i]->SetActive(false);
                   if (DEBUG_EN){
                      printf("Player %s false \n", players[i]->GetColor());
@@ -172,7 +179,7 @@ namespace octet {
                }
             }
             else{
-               if ((math::abs(playY - boardY) <= 1.0 + 1.0 + lower_offset) && distanceToBoard <= board->GetRadius() + lower_offset){
+               if ((math::abs(playY - boardY) <= 2.0 + 1.0 + lower_offset) && distanceToBoard <= board->GetRadius() + lower_offset){
                   players[i]->SetActive(true);
                   if (DEBUG_EN){
                      printf("Player %s true \n", players[i]->GetColor());
@@ -190,6 +197,7 @@ namespace octet {
 
          ~example_physics() {         
             ResetPhysics();
+            joystick->ShutDown();
          }
 
          /// this is called once OpenGL is initialized
@@ -197,49 +205,61 @@ namespace octet {
 
             num_players = 4;
 
-            app_scene =  new visual_scene();
+            joystick = new Joystick();
+            joystick->InitInputDevice(this);
+
+            btScalar boardRadius = 40.0f;
+            btScalar boardhalfheight = 2.0f;
+            btScalar back_size = 300;
+
+            app_scene = new visual_scene();
 
             app_scene->create_default_camera_and_lights();
-            scenecameranode = app_scene->get_camera_instance(0)->get_node();
-            
-            if (!joystick){
-               joystick = new Joystick();
-               joystick->InitInputDevice(this);
-            }            
-            
-            btScalar boardRadius = 40.0f;
-            btScalar boardhalfheight = 1.0f;
+            scenecamera = app_scene->get_camera_instance(0);
 
             //Chuck: camera is fixed, changing the parameters in order to have camera looking at the platform along Z-axis
-            scenecameranode->access_nodeToParent().rotateX(-30);
-            scenecameranode->access_nodeToParent().translate(0, 20, boardRadius * 2);
-            world->setGravity(btVector3(0,-40,0)); //To prevent strange behaviour on the collisions (on over the other)
-            // add the ground (as a static object)
-
+            scenecamera->get_node()->access_nodeToParent().rotateX(-30);
+            scenecamera->get_node()->access_nodeToParent().translate(0, 20, boardRadius * 2);
+            auto p = scenecamera->get_far_plane();
+            scenecamera->set_far_plane(500); //->set_perspective(0.1f, 45, 1, 0.00001f, 500); //why using set perspective does not work???
+            
             mat4t modelToWorld;
             modelToWorld.loadIdentity();
 
+            //Chuck: setting the background
+            material *back_mat = new material(new image("assets/supernova.gif"));
+            mesh_sphere *meshsphere = new mesh_sphere(vec3(0, 0, 0), back_size);
+            scene_node *node = new scene_node(modelToWorld, atom_);
+            node->rotate(180, vec3(0,1,0));
+            node->rotate(10, vec3(1, 0, 0));
+            app_scene->add_child(node);
+            background = new mesh_instance(node, meshsphere, back_mat);
+            app_scene->add_mesh_instance(background);
+
+
+            //Chuck: add the ground (as a static object)
+            modelToWorld.loadIdentity();
             board = new Board(boardRadius, boardhalfheight);
             world->addRigidBody(board->GetRigidBody());
 
-            modelToWorld.loadIdentity();
-            btCollisionShape *shape = new btBoxShape(btVector3(boardRadius * 2, boardhalfheight * 0.5, boardRadius * 2));
-            btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
-            btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
-            btTransform transform(matrix, pos);
-            btDefaultMotionState *motion = new btDefaultMotionState(transform);
-
-            //Calculate inertia for the body
-            btVector3 inertia;
-            shape->calculateLocalInertia(0.0f, inertia);
-            //Saving rigid body 
-            btRigidBody *deadBox = new btRigidBody(0.0f, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
-
-            //world->addRigidBody(deadBox);
-
             app_scene->add_child(board->GetNode());
             app_scene->add_mesh_instance(board->GetMesh());
+            
+            //modelToWorld.loadIdentity();
+            //btCollisionShape *shape = new btBoxShape(btVector3(boardRadius * 2, boardhalfheight * 0.5, boardRadius * 2));
+            //btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
+            //btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
+            //btTransform transform(matrix, pos);
+            //btDefaultMotionState *motion = new btDefaultMotionState(transform);
 
+            ////Calculate inertia for the body
+            //btVector3 inertia;
+            //shape->calculateLocalInertia(0.0f, inertia);
+            ////Saving rigid body 
+            //btRigidBody *deadBox = new btRigidBody(0.0f, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
+
+            //world->addRigidBody(deadBox);
+            
             for (int i = 0; i < num_players; i++)
             {
                material* mat;
@@ -267,7 +287,7 @@ namespace octet {
                      break;
                }
 
-               Player *player = new Player(2.0f, 1.0f, *mat, (Color)i, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
                
                world->addRigidBody(player->GetRigidBody());
                
@@ -285,11 +305,11 @@ namespace octet {
                //constr->setAngularLowerLimit(btVector3(0, 0, 0));
                //constr->setAngularUpperLimit(btVector3(0, 0, 0));
                
-               app_scene->add_child(player->GetNode());
-               app_scene->add_mesh_instance(player->GetMesh());
+              app_scene->add_child(player->GetNode());
+              app_scene->add_mesh_instance(player->GetMesh());
+               
                players.push_back(player);
             }
-
          }
 
          /// this is called to draw the world

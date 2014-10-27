@@ -298,7 +298,7 @@ namespace octet { namespace scene {
             float bb_size = length(bb.get_half_extent()) * 2.0f;
             float distance = max(bb.get_max().z(), bb_size) * 2;
             node->access_nodeToParent().translate(0, 0, distance);
-            float f = distance * 2, n = f * 0.001f;
+            float f = distance * 100, n = f * 0.001f;
             cam->set_node(node);
             cam->set_perspective(0.1f, 45, 1, n, f);
             //cam->get_node()->translate(vec3(0,30,15));
