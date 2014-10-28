@@ -9,6 +9,7 @@
 #include "Player.h"
 #include "Board.h"
 #include "Joystick.h"
+#include "Clock.h"
 
 
 namespace octet {
@@ -106,7 +107,8 @@ namespace octet {
             }
 
             btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
-            var->SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
+            var->GetRigidBody()->setWorldTransform(trans);
+            var->GetRigidBody()->setLinearVelocity(btVector3(0,0,0)); // SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
 
          }
       }
@@ -162,7 +164,8 @@ namespace octet {
 
          if (is_key_down(key_space))
          {
-            GameReset();
+            ResetPlayers();
+            //GameReset();
          }
          else{
             for (unsigned i = 0; i < players.size(); i++)
@@ -186,8 +189,11 @@ namespace octet {
             }
 
             //just for player zero we take input from controller
-            btVector3 joyInput = joystick->AcquireInputData();
-            players[0]->ApplyCentralForce(joyInput);
+            for (unsigned i = 0; i < players.size() - 1; i++)
+            {
+               btVector3 joyInput = joystick->AcquireInputData(i);
+               players[i]->ApplyCentralForce(joyInput);
+            }
          }
       }
    
@@ -245,10 +251,10 @@ namespace octet {
          /// this is called once OpenGL is initialized
          void app_init() {
 
-            num_players = 4;
-
             joystick = new Joystick();
             joystick->InitInputDevice(this);
+
+            num_players = joystick->GetNumberOfDevicesFound() + 1;
 
             /*btScalar boardRadius = 40.0f;
             btScalar boardhalfheight = 2.0f;*/

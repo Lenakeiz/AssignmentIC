@@ -1,19 +1,21 @@
 #pragma once
 #include <time.h>
 
-namespace octect {
+namespace octet {
 
    class Clock
    {
       private:
          
          unsigned curr_ms;
-         int target_seconds;
+         unsigned curr_sec;
+         unsigned curr_min;
+         unsigned target_seconds;
          clock_t start_timer;      
       
       public:
 
-         Clock(unsigned sec) : start_timer(0), curr_ms(0)
+         Clock(unsigned sec) : start_timer(0), curr_ms(0), curr_min(0), curr_sec(0)
          {
             target_seconds = sec;
          }
@@ -34,8 +36,10 @@ namespace octect {
          bool TimeElapsed(){
             clock_t tick = clock();
             curr_ms = tick - start_timer;
-            int sec = (curr_ms/CLOCKS_PER_SEC)/60;
-            return (target_seconds - sec < 0);
+            curr_sec = ((curr_ms / CLOCKS_PER_SEC));
+            curr_min = (curr_ms / (CLOCKS_PER_SEC))/60;
+            int time_left = target_seconds - curr_sec;
+            return (time_left < 0);
          }
 
 

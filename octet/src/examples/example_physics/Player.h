@@ -1,6 +1,10 @@
 #pragma once
+#include "Clock.h"
 
 namespace octet {
+   
+   enum { NUM_POWERUPS = 4 };
+
    enum class Color {
       RED,
       BLUE,
@@ -15,17 +19,23 @@ namespace octet {
       Color color;
       float mass;
       bool active;
+      bool powerups[NUM_POWERUPS];
+      Clock timers[NUM_POWERUPS];
+
       ref<material> mat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
       btDefaultMotionState *motion; //Chuck: KEEP ATTENTION HOW RELEASE THIS
       btRigidBody* rigidBody; //Try implementing an non invasive (smart) pointer -- effective c++
-      btGeneric6DofConstraint* constraint;
+      btGeneric6DofConstraint* constraint;      
 
    public:
    
       Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, int n = 4)
       {
+         
+         //ResetPowerUps();
+         
          lifes = n;
          active = true;
          mass = 0.5f;
@@ -58,6 +68,15 @@ namespace octet {
          meshinstance = new mesh_instance(node, meshcylinder, mat);
 
       }
+
+      //ResetPowerUps(){
+
+      //   for (unsigned i = 0; i < NUM_POWERUPS - 1; i++)
+      //   {
+      //      
+      //   }
+
+      //}
 
       const char* GetColorString(){
          switch (this->color){

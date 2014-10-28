@@ -13,16 +13,17 @@ namespace octet{
       bool preferredJoyCfgValid;
    };
 
-   class Joystick
+   class Joystick : public resource
    {
       private:
          //IDirectInput8* directInput;
          LPDIRECTINPUT8 directInput = nullptr;
          //IDirectInputDevice8* joystick;
-         LPDIRECTINPUTDEVICE8 joystick = nullptr;
+         dynarray<LPDIRECTINPUTDEVICE8> joysticks;
+
       public:
 
-         Joystick() : directInput(NULL), joystick(NULL)
+         Joystick() : directInput(NULL), joysticks(NULL)
          {
          }
 
@@ -37,8 +38,10 @@ namespace octet{
          static BOOL CALLBACK EnumJoystickCallback(const DIDEVICEINSTANCE* diInstance, VOID* pContext){
 
             auto context = reinterpret_cast<Joystick*>(pContext);
-            
-            HRESULT hr = context->directInput->CreateDevice(diInstance->guidInstance, &(context->joystick), nullptr);
+
+            LPDIRECTINPUTDEVICE8 currInput;
+
+            HRESULT hr = context->directInput->CreateDevice(diInstance->guidInstance, &currInput, nullptr);
             if (FAILED(hr)){
                if (DEBUG_EN){
                   printf("Failed on interfacing with the controller");
@@ -46,13 +49,15 @@ namespace octet{
                assert(0);
             }
 
+            context->joysticks.push_back(currInput);
+
             return DIENUM_CONTINUE;
 
          }
 
          static BOOL CALLBACK EnumObjectsCallback(const DIDEVICEOBJECTINSTANCE* didoi, VOID* pContext){
 
-            auto context = reinterpret_cast<Joystick*>(pContext);
+            auto curr_joystick = reinterpret_cast<LPDIRECTINPUTDEVICE8>(pContext);
 
             if (didoi->dwType & DIDFT_AXIS){
 
@@ -65,10 +70,9 @@ namespace octet{
                diprg.lMax = +100;
 
                // Set the range for the axis
-               if (FAILED(context->joystick->SetProperty(DIPROP_RANGE, &diprg.diph)))
-                  return DIENUM_STOP;
-               
-            }
+               if (FAILED(curr_joystick->SetProperty(DIPROP_RANGE, &diprg.diph)))
+                     return DIENUM_STOP;
+               }
 
             return DIENUM_CONTINUE;
 
@@ -128,53 +132,62 @@ namespace octet{
             }
 
             //Chuck: check current joystick existence, it avooids calling the set data format before the callback.
-            if (!joystick)
+            if (joysticks.size() == 0)
             {
                return;
             }
 
-            hr = joystick->SetDataFormat(&c_dfDIJoystick); //Chuck: specify what kind of structure we will have when using ::GetDeviceState
-            if (FAILED(hr)){
-               if (DEBUG_EN){
-                  printf("Failed to assign data format\n");
+            unsigned i = 0;
+            for each (auto var in joysticks)
+            {
+               hr = var->SetDataFormat(&c_dfDIJoystick);
+               if (FAILED(hr)){
+                  if (DEBUG_EN){
+                     printf("Failed to assign data format\n");
+                  }
+                  assert(0);
                }
-               assert(0);
-            }               
 
-            if (FAILED(hr = joystick->SetCooperativeLevel(window, DISCL_EXCLUSIVE | DISCL_BACKGROUND)))
-               assert(0);
+               if (FAILED(hr = var->SetCooperativeLevel(window, DISCL_EXCLUSIVE | DISCL_BACKGROUND)))
+                  assert(0);
 
-            //Chuck: enumerate the joystick objects. In callback we set range for the values.
-            hr = joystick->EnumObjects(Joystick::EnumObjectsCallback, (VOID*) this, DIDFT_AXIS);
-            if (FAILED(hr)){
-               if (DEBUG_EN){
-                  printf("Failed on enumerating joystick objects\n");
+               LPDIRECTINPUTDEVICE8 curr_joy = joysticks[i];
+               //Chuck: enumerate the joystick objects. In callback we set range for the values.
+               hr = var->EnumObjects(Joystick::EnumObjectsCallback, curr_joy, DIDFT_AXIS);
+
+               if (FAILED(hr)){
+                  if (DEBUG_EN){
+                     printf("Failed on enumerating joystick objects\n");
+                  }
+                  assert(0);
                }
-               assert(0);
-            } 
 
+               i++;
+
+            }
+            //hr = joystick->SetDataFormat(&c_dfDIJoystick); //Chuck: specify what kind of structure we will have when using ::GetDeviceState
          }
 
-         btVector3 AcquireInputData(){
+         btVector3 AcquireInputData(int playerId){
             
             HRESULT hr;
             DIJOYSTATE js;
 
-            if (!joystick)
+            if (joysticks[playerId] == nullptr)
                return btVector3(0,0,0);
 
             //Chuck: Poll the device to read the current state
-            hr = joystick->Poll();
+            hr = joysticks[playerId]->Poll();
             if (FAILED(hr))
             {
                //Chuck: input is interrupted, we aren't tracking any state between polls, so
                // we don't have any special reset that needs to be done. We just re-acquire and try again.
-               hr = joystick->Acquire();
+               hr = joysticks[playerId]->Acquire();
                return btVector3(0, 0, 0);
             }
 
             //Chuck: get the input's device state
-            hr = joystick->GetDeviceState(sizeof(DIJOYSTATE), &js);
+            hr = joysticks[playerId]->GetDeviceState(sizeof(DIJOYSTATE), &js);
 
             if (FAILED(hr)){
                if (DEBUG_EN){
@@ -186,12 +199,19 @@ namespace octet{
             return btVector3(js.lX, 0, js.lY);
          
          }
+         
+         int GetNumberOfDevicesFound(){
+            return joysticks.size();
+         }
 
          void ShutDown()
          {
-            if (joystick != nullptr){
-               joystick->Unacquire();
-               joystick->Release();
+            if (joysticks.size() != 0){
+               for each (auto curr_joy in joysticks)
+               {
+                  curr_joy->Unacquire();
+                  curr_joy->Release();
+               }
             }
 
             if (!directInput){
