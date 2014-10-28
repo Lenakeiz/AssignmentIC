@@ -15,6 +15,11 @@ namespace octet {
       
       public:
 
+         
+         Clock() : start_timer(0), curr_ms(0), curr_min(0), curr_sec(0), target_seconds(0){
+            
+         }
+
          Clock(unsigned sec) : start_timer(0), curr_ms(0), curr_min(0), curr_sec(0)
          {
             target_seconds = sec;

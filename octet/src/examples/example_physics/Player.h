@@ -21,7 +21,7 @@ namespace octet {
       bool active;
       bool powerups[NUM_POWERUPS];
       Clock timers[NUM_POWERUPS];
-
+      
       ref<material> mat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
@@ -34,7 +34,7 @@ namespace octet {
       Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, int n = 4)
       {
          
-         //ResetPowerUps();
+         ResetPowerUps();
          
          lifes = n;
          active = true;
@@ -69,14 +69,15 @@ namespace octet {
 
       }
 
-      //ResetPowerUps(){
+      void ResetPowerUps(){
 
-      //   for (unsigned i = 0; i < NUM_POWERUPS - 1; i++)
-      //   {
-      //      
-      //   }
+         for (unsigned i = 0; i < NUM_POWERUPS - 1; i++)
+         {
+            powerups[i] = false;
+            
+         }
 
-      //}
+      }
 
       const char* GetColorString(){
          switch (this->color){
