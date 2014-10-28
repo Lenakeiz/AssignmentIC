@@ -59,7 +59,7 @@ namespace octet {
 
       }
 
-      const char* GetColor(){
+      const char* GetColorString(){
          switch (this->color){
          case Color::RED: return "Red"; break;
          case Color::GREEN: return "Green"; break;
@@ -67,6 +67,10 @@ namespace octet {
          case Color::YELLOW: return "Yellow"; break;
          default: return ""; break;
          }
+      }
+
+      const Color GetColor(){
+         return (this->color);
       }
 
       void SetActive(bool enabled){
@@ -107,12 +111,22 @@ namespace octet {
          return transform;
       }
 
+      void SetTransform(const btTransform& tra){
+
+         if (motion) {
+            motion->setWorldTransform(tra);
+         }
+
+      }
+
       void SetNodeToWorld(const mat4t& nodeToWorld){
          node->access_nodeToParent() = nodeToWorld;
       }
 
       void SetObjectToTheWorld(){
          btTransform playerTransform = this->GetTransform();
+         //btTransform playerTransform;
+         //this->GetRigidBody()->getMotionState()->getWorldTransform(playerTransform);// GetTransform();
          btQuaternion btq = playerTransform.getRotation();
          btVector3 com = playerTransform.getOrigin();
          quat q(btq[0], btq[1], btq[2], btq[3]);

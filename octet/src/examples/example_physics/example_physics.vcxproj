@@ -221,6 +221,7 @@
     <ClInclude Include="..\..\shaders\shaders.h" />
     <ClInclude Include="..\..\shaders\texture_shader.h" />
     <ClInclude Include="Board.h" />
+    <ClInclude Include="Clock.h" />
     <ClInclude Include="Joystick.h" />
     <ClInclude Include="mycylinder.h" />
     <ClInclude Include="Player.h" />

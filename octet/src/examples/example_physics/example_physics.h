@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// (C) Andy Thomason 2012-2014
+// (C) Andrea Castegnaro 2014
 //
-// Modular Framework for OpenGLES2 rendering on multiple platforms.
+//
 //
 #pragma once
 #define DEBUG_EN 1
@@ -40,10 +40,10 @@ namespace octet {
       //Chuck: adding array for players currently playing and board
       ref<mesh_instance> background;
       dynarray<Player*> players;
-      Board *board;
+      ref<Board> board;
       
       //Chuck: adding reference to the camera
-      camera_instance *scenecamera;
+      ref<camera_instance> scenecamera;
 
       void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
 
@@ -71,6 +71,52 @@ namespace octet {
          app_scene->add_child(node);
          app_scene->add_mesh_instance(new mesh_instance(node, meshsphere, mat));
 
+      }
+
+      void ResetPlayers(){
+
+         btScalar boardRadius = board->GetRadius();
+         btScalar boardhalfheight = board->GetHalfHeight();
+
+         mat4t modelToWorld;        
+
+         for each (auto var in players)
+         {
+            modelToWorld.loadIdentity();
+            
+            var->GetRigidBody()->clearForces();
+            var->SetActive(false);
+
+            switch (var->GetColor())
+            {
+            case Color::RED:
+               modelToWorld.translate(-(boardRadius * 0.5f), boardhalfheight * 2, 0);
+               break;
+            case Color::GREEN:
+               modelToWorld.translate(boardRadius * 0.5f, boardhalfheight * 2, 0);// var->GetRigidBody()->translate(btVector3(boardRadius * 0.5f, boardhalfheight * 2, 0));
+               break;
+            case Color::BLUE:
+               modelToWorld.translate(0, boardhalfheight * 2, boardRadius * 0.5f);// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, boardRadius * 0.5f));
+               break;
+            case Color::YELLOW:
+               modelToWorld.translate(0, boardhalfheight * 2, -(boardRadius * 0.5f));// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, -(boardRadius * 0.5f)));
+               break;
+            default:
+               break;
+            }
+
+            btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
+            var->SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
+
+         }
+      }
+
+      void GameReset(){
+         ResetPhysics();
+         InitPhysics();
+         joystick->ShutDown(); //Chuck: THIS SET OF INSTRUCTION IS A GAME RESET
+         delete joystick;
+         app_init();
       }
 
       void InitPhysics(){
@@ -116,37 +162,33 @@ namespace octet {
 
          if (is_key_down(key_space))
          {
-            ResetPhysics();
-            InitPhysics();
-            joystick->ShutDown();
-            delete joystick;
-            app_init();
+            GameReset();
          }
-         
-         for (unsigned i = 0; i < players.size(); i++)
-         {
-            btVector3 physics_vector(0, 0, 0);
-            if (players[i]->GetActive()){
-               if (is_key_down(keyboardset[4 * i])){
-                  physics_vector += (btVector3(0, 0, -120));
+         else{
+            for (unsigned i = 0; i < players.size(); i++)
+            {
+               btVector3 physics_vector(0, 0, 0);
+               if (players[i]->GetActive()){
+                  if (is_key_down(keyboardset[4 * i])){
+                     physics_vector += (btVector3(0, 0, -120));
+                  }
+                  if (is_key_down(keyboardset[4 * i + 1])){
+                     physics_vector += (btVector3(-120, 0, 0));
+                  }
+                  if (is_key_down(keyboardset[4 * i + 2])){
+                     physics_vector += (btVector3(0, 0, 120));
+                  }
+                  if (is_key_down(keyboardset[4 * i + 3])){
+                     physics_vector += (btVector3(120, 0, 0));
+                  }
                }
-               if (is_key_down(keyboardset[4 * i + 1])){
-                  physics_vector += (btVector3(-120, 0, 0));
-               }
-               if (is_key_down(keyboardset[4 * i + 2])){
-                  physics_vector += (btVector3(0, 0, 120));
-               }
-               if (is_key_down(keyboardset[4 * i + 3])){
-                  physics_vector += (btVector3(120, 0, 0));
-               }
-            }            
-            players[i]->ApplyCentralForce(physics_vector);
+               players[i]->ApplyCentralForce(physics_vector);
+            }
+
+            //just for player zero we take input from controller
+            btVector3 joyInput = joystick->AcquireInputData();
+            players[0]->ApplyCentralForce(joyInput);
          }
-         
-         //just for player zero we take input from controller
-         btVector3 joyInput = joystick->AcquireInputData();
-         players[0]->ApplyCentralForce(joyInput);
-                 
       }
    
       void checkPLayersStatus(){
@@ -174,7 +216,7 @@ namespace octet {
                if (distanceToBoard >= boardRadius + upper_offset || math::abs(playY - boardY) > 2.0 + 1.0 + upper_offset + 0.5){
                   players[i]->SetActive(false);
                   if (DEBUG_EN){
-                     printf("Player %s false \n", players[i]->GetColor());
+                     printf("Player %s false \n", players[i]->GetColorString());
                   } 
                }
             }
@@ -182,7 +224,7 @@ namespace octet {
                if ((math::abs(playY - boardY) <= 2.0 + 1.0 + lower_offset) && distanceToBoard <= board->GetRadius() + lower_offset){
                   players[i]->SetActive(true);
                   if (DEBUG_EN){
-                     printf("Player %s true \n", players[i]->GetColor());
+                     printf("Player %s true \n", players[i]->GetColorString());
                   }
                }
             }
@@ -208,8 +250,9 @@ namespace octet {
             joystick = new Joystick();
             joystick->InitInputDevice(this);
 
-            btScalar boardRadius = 40.0f;
-            btScalar boardhalfheight = 2.0f;
+            /*btScalar boardRadius = 40.0f;
+            btScalar boardhalfheight = 2.0f;*/
+            vec3 boardsize(40.0f,2.0f,40.0f);
             btScalar back_size = 300;
 
             app_scene = new visual_scene();
@@ -219,7 +262,7 @@ namespace octet {
 
             //Chuck: camera is fixed, changing the parameters in order to have camera looking at the platform along Z-axis
             scenecamera->get_node()->access_nodeToParent().rotateX(-30);
-            scenecamera->get_node()->access_nodeToParent().translate(0, 20, boardRadius * 2);
+            scenecamera->get_node()->access_nodeToParent().translate(0, 20, boardsize.x() * 2);
             auto p = scenecamera->get_far_plane();
             scenecamera->set_far_plane(500); //->set_perspective(0.1f, 45, 1, 0.00001f, 500); //why using set perspective does not work???
             
@@ -235,11 +278,10 @@ namespace octet {
             app_scene->add_child(node);
             background = new mesh_instance(node, meshsphere, back_mat);
             app_scene->add_mesh_instance(background);
-
-
+            
             //Chuck: add the ground (as a static object)
             modelToWorld.loadIdentity();
-            board = new Board(boardRadius, boardhalfheight);
+            board = new Board(boardsize);
             world->addRigidBody(board->GetRigidBody());
 
             app_scene->add_child(board->GetNode());
@@ -269,19 +311,19 @@ namespace octet {
                {
                case Color::RED:
                   mat = new material(vec4(1, 0, 0, 1));
-                  modelToWorld.translate(-(boardRadius * 0.5f), boardhalfheight * 2, -0);
+                  modelToWorld.translate(-(boardsize.x() * 0.5f), boardsize.y() * 2, -0);
                   break;
                case Color::GREEN:
                   mat = new material(vec4(0, 1, 0, 1));
-                  modelToWorld.translate(boardRadius * 0.5f, boardhalfheight * 2, 0);
+                  modelToWorld.translate(boardsize.x()  * 0.5f, boardsize.y() * 2, 0);
                   break;
                case Color::BLUE:
                   mat = new material(vec4(0, 0, 1, 1));
-                  modelToWorld.translate(0, boardhalfheight * 2, boardRadius * 0.5f);
+                  modelToWorld.translate(0, boardsize.y() * 2, boardsize.x() * 0.5f);
                   break;
                case Color::YELLOW:
                   mat = new material(vec4(1, 1, 0, 1));
-                  modelToWorld.translate(0, boardhalfheight * 2, -(boardRadius * 0.5f));
+                  modelToWorld.translate(0, boardsize.y() * 2, -(boardsize.x() * 0.5f));
                   break;
                   default:
                      break;
@@ -298,8 +340,8 @@ namespace octet {
                btGeneric6DofConstraint* constr = new btGeneric6DofConstraint((*player->GetRigidBody()), localConstr, true);//(*player->GetRigidBody()),*board->GetRigidBody(), localConstr, localConstr2, false
                               
                world->addConstraint(constr);
-               constr->setLinearLowerLimit(btVector3(-boardRadius - (playerCOM.getX()) - 200, -100 - playerCOM.getY(), -boardRadius - (playerCOM.getZ()) - 200 ));
-               constr->setLinearUpperLimit(btVector3(boardRadius - (playerCOM.getX()) + 200, 10, boardRadius - (playerCOM.getZ()) + 200));
+               constr->setLinearLowerLimit(btVector3(-boardsize.x() - (playerCOM.getX()) - 200, -100 - playerCOM.getY(), -boardsize.x() - (playerCOM.getZ()) - 200));
+               constr->setLinearUpperLimit(btVector3(boardsize.x() - (playerCOM.getX()) + 200, 10, boardsize.x() - (playerCOM.getZ()) + 200));
                constr->setAngularLowerLimit(btVector3(-SIMD_PI * 0.25, 0, -SIMD_PI * 0.25));
                constr->setAngularUpperLimit(btVector3(SIMD_PI * 0.25, 0, SIMD_PI * 0.25));
                //constr->setAngularLowerLimit(btVector3(0, 0, 0));
@@ -315,9 +357,11 @@ namespace octet {
          /// this is called to draw the world
          void draw_world(int x, int y, int w, int h) {
             
-            world->stepSimulation(1.0f/60);            
-            checkPLayersStatus();
             acquireInputs();
+            
+            world->stepSimulation(1.0f/60);            
+            
+            checkPLayersStatus();
 
             for (unsigned i = 0; i != players.size(); i++)
             {
