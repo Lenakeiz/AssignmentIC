@@ -5,12 +5,7 @@ namespace octet {
    
    enum { NUM_POWERUPS = 4 };
 
-   enum class Color {
-      RED,
-      BLUE,
-      GREEN,
-      YELLOW
-   };
+   enum class Color { RED, BLUE, GREEN, YELLOW };
 
    class Player
    {
@@ -19,6 +14,8 @@ namespace octet {
       Color color;
       float mass;
       bool active;
+
+      //Timers for powerups and cooldowns
       bool powerups[NUM_POWERUPS];
       Clock timers[NUM_POWERUPS];
       
@@ -74,9 +71,57 @@ namespace octet {
          for (unsigned i = 0; i < NUM_POWERUPS - 1; i++)
          {
             powerups[i] = false;
-            
          }
 
+         timers[0].AssignTargetSec(3);
+         timers[1].AssignTargetSec(3);
+         timers[2].AssignTargetSec(30); //DASH
+         timers[3].AssignTargetSec(3);
+
+      }
+
+      void ApplyPowerUps(BYTE rgbButtons[], int size){
+
+         for (unsigned i = 0; i < size; i++){
+            if (!powerups[i] && (rgbButtons[i] & 0x80)){
+               
+               //if pressed apply powerups
+               btVector3 linearVelNorm;
+               switch (i){
+                  case 0:
+                     //Chuck: not implemented
+                     break;
+                  case 1:
+                     //Chuck: not implemented
+                     break;
+                  case 2:
+                     //Chuck: DASH
+                     linearVelNorm = rigidBody->getLinearVelocity();
+                     linearVelNorm = linearVelNorm.normalize();
+                     rigidBody->applyCentralImpulse(linearVelNorm * 20);
+                     break;
+                  case 3:
+                     //Chuck: not implemented
+                     break;
+                  default:
+                     break;
+               }
+
+               powerups[i] = true;
+               timers[i].Reset();
+            }
+         }
+      }
+
+      void CheckPowerUps(){
+         for (unsigned i = 0; i < NUM_POWERUPS; i++)
+         {
+            if (powerups[i]){
+               if (timers[i].TimeElapsed()){
+                  powerups[i] = false;
+               }
+            }
+         }
       }
 
       const char* GetColorString(){

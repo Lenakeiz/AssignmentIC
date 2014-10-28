@@ -14,8 +14,8 @@
 
 namespace octet {
   /// Scene using bullet for physics effects.
-   static const char keyboardset[16] = { 'W', 'A', 'S', 'D',
-      key_up, key_left, key_down, key_right,
+   static const char keyboardset[16] = { key_up, key_left, key_down, key_right, 
+      'W', 'A', 'S', 'D',
       'T', 'F', 'G', 'H',
       'I', 'J', 'K', 'L' };
 
@@ -158,7 +158,7 @@ namespace octet {
          delete dispatcher;
       }
 
-      void acquireInputs(){
+      void AcquireInputs(){
 
          if (is_key_down(key_esc)) exit(1);
 
@@ -170,34 +170,43 @@ namespace octet {
          else{
             for (unsigned i = 0; i < players.size(); i++)
             {
-               btVector3 physics_vector(0, 0, 0);
+               //Chuck: Dealing movement
                if (players[i]->GetActive()){
-                  if (is_key_down(keyboardset[4 * i])){
-                     physics_vector += (btVector3(0, 0, -120));
+                  if (i < joystick->GetNumberOfDevicesFound()){
+                     joystick->AcquireInputData(i);
+                     DIJOYSTATE joyInput = joystick->GetCurrentState();
+                     players[i]->ApplyCentralForce(btVector3(joyInput.lX, 0, joyInput.lY));
+                     players[i]->ApplyPowerUps(joyInput.rgbButtons, 32);
                   }
-                  if (is_key_down(keyboardset[4 * i + 1])){
-                     physics_vector += (btVector3(-120, 0, 0));
+                  else{
+                     btVector3 physics_vector(0, 0, 0);
+                     if (is_key_down(keyboardset[0])){
+                        physics_vector += (btVector3(0, 0, -120));
+                     }
+                     if (is_key_down(keyboardset[1])){
+                        physics_vector += (btVector3(-120, 0, 0));
+                     }
+                     if (is_key_down(keyboardset[2])){
+                        physics_vector += (btVector3(0, 0, 120));
+                     }
+                     if (is_key_down(keyboardset[3])){
+                        physics_vector += (btVector3(120, 0, 0));
+                     }
+                     players[i]->ApplyCentralForce(physics_vector);
                   }
-                  if (is_key_down(keyboardset[4 * i + 2])){
-                     physics_vector += (btVector3(0, 0, 120));
-                  }
-                  if (is_key_down(keyboardset[4 * i + 3])){
-                     physics_vector += (btVector3(120, 0, 0));
-                  }
-               }
-               players[i]->ApplyCentralForce(physics_vector);
-            }
-
-            //just for player zero we take input from controller
-            for (unsigned i = 0; i < players.size() - 1; i++)
-            {
-               btVector3 joyInput = joystick->AcquireInputData(i);
-               players[i]->ApplyCentralForce(joyInput);
+               }                              
             }
          }
       }
    
-      void checkPLayersStatus(){
+      void SetPlayersToTheWorld(){
+         for (unsigned i = 0; i != players.size(); i++)
+         {
+            players[i]->SetObjectToTheWorld();
+         }
+      }
+      
+      void CheckPLayersStatus(){
 
          btVector3 boardtrans = board->GetRigidBody()->getCenterOfMassPosition();
          btVector3 boardtransXZ(boardtrans.getX(),0,boardtrans.getZ());
@@ -205,6 +214,8 @@ namespace octet {
 
          for (unsigned i = 0; i < players.size(); i++)
          {
+            //Chuck: Control position respect to the arena
+
             btRigidBody* currBody = players[i]->GetRigidBody();
             //btTransform trans = currBody->getCenterOfMassTransform();
             btVector3 currPLayer = currBody->getCenterOfMassPosition(); //trans.getOrigin();
@@ -234,6 +245,9 @@ namespace octet {
                   }
                }
             }
+
+            players[i]->CheckPowerUps();
+
          }
       }
 
@@ -250,6 +264,9 @@ namespace octet {
 
          /// this is called once OpenGL is initialized
          void app_init() {
+
+            /*Joystick::minInputRange = -120;
+            Joystick::minInputRange = 120;*/
 
             joystick = new Joystick();
             joystick->InitInputDevice(this);
@@ -363,17 +380,14 @@ namespace octet {
          /// this is called to draw the world
          void draw_world(int x, int y, int w, int h) {
             
-            acquireInputs();
+            AcquireInputs();
             
             world->stepSimulation(1.0f/60);            
             
-            checkPLayersStatus();
+            CheckPLayersStatus();
 
-            for (unsigned i = 0; i != players.size(); i++)
-            {
-               players[i]->SetObjectToTheWorld();
-            }
-
+            SetPlayersToTheWorld();
+            
             /*for (unsigned i = 0; i != rigid_bodies.size(); ++i) {
                btRigidBody *rigid_body = rigid_bodies[i];
                btQuaternion btq = rigid_body->getOrientation();

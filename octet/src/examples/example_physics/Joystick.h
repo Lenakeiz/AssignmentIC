@@ -15,17 +15,28 @@ namespace octet{
 
    class Joystick : public resource
    {
+
       private:
-         //IDirectInput8* directInput;
+         
          LPDIRECTINPUT8 directInput = nullptr;
-         //IDirectInputDevice8* joystick;
          dynarray<LPDIRECTINPUTDEVICE8> joysticks;
 
+         DIJOYSTATE curr_state;
+
       public:
+
+         /*static int minInputRange;
+         static int maxInputRange;*/
 
          Joystick() : directInput(NULL), joysticks(NULL)
          {
          }
+
+         /*Joystick(int min, int max) : directInput(NULL), joysticks(NULL)
+         {
+            Joystick::minInputRange = min;
+            Joystick::maxInputRange = max;
+         }*/
 
          ~Joystick()
          {
@@ -66,8 +77,8 @@ namespace octet{
                diprg.diph.dwHeaderSize = sizeof(DIPROPHEADER);
                diprg.diph.dwHow = DIPH_BYID;
                diprg.diph.dwObj = didoi->dwType; // Specify the enumerated axis
-               diprg.lMin = -100;
-               diprg.lMax = +100;
+               diprg.lMin = -120;
+               diprg.lMax = 120;
 
                // Set the range for the axis
                if (FAILED(curr_joystick->SetProperty(DIPROP_RANGE, &diprg.diph)))
@@ -168,13 +179,13 @@ namespace octet{
             //hr = joystick->SetDataFormat(&c_dfDIJoystick); //Chuck: specify what kind of structure we will have when using ::GetDeviceState
          }
 
-         btVector3 AcquireInputData(int playerId){
+         void AcquireInputData(int playerId){
             
             HRESULT hr;
             DIJOYSTATE js;
 
             if (joysticks[playerId] == nullptr)
-               return btVector3(0,0,0);
+               return; //js;
 
             //Chuck: Poll the device to read the current state
             hr = joysticks[playerId]->Poll();
@@ -183,7 +194,7 @@ namespace octet{
                //Chuck: input is interrupted, we aren't tracking any state between polls, so
                // we don't have any special reset that needs to be done. We just re-acquire and try again.
                hr = joysticks[playerId]->Acquire();
-               return btVector3(0, 0, 0);
+               return;// js;
             }
 
             //Chuck: get the input's device state
@@ -193,17 +204,23 @@ namespace octet{
                if (DEBUG_EN){
                   printf("Failed on acquiring device data \n");
                }
-               return btVector3(0, 0, 0);
+               return;// js;
             }
 
-            return btVector3(js.lX, 0, js.lY);
+            curr_state = js;
+
+            return;// js;
          
          }
          
+         DIJOYSTATE GetCurrentState(){
+            return curr_state;
+         }
+
          int GetNumberOfDevicesFound(){
             return joysticks.size();
          }
-
+         
          void ShutDown()
          {
             if (joysticks.size() != 0){
