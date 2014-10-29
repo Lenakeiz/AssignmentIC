@@ -95,7 +95,7 @@ namespace octet {
                      //Chuck: not implemented
                      break;
                   case 2:
-                     //Chuck: DASH
+                     //Chuck: DASH: using linear velocity to get directin of movement, applying an impulse to that
                      linearVelNorm = rigidBody->getLinearVelocity();
                      linearVelNorm = linearVelNorm.normalize();
                      rigidBody->applyCentralImpulse(linearVelNorm * 40);
@@ -109,6 +109,7 @@ namespace octet {
 
                powerups[i] = true;
                timers[i].Reset();
+
             }
          }
       }
