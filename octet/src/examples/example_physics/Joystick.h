@@ -13,7 +13,7 @@ namespace octet{
       bool preferredJoyCfgValid;
    };
 
-   class Joystick : public resource
+   class Joystick
    {
 
       private:
@@ -25,23 +25,13 @@ namespace octet{
 
       public:
 
-         /*static int minInputRange;
-         static int maxInputRange;*/
-
          Joystick() : directInput(NULL), joysticks(NULL)
          {
          }
 
-         /*Joystick(int min, int max) : directInput(NULL), joysticks(NULL)
-         {
-            Joystick::minInputRange = min;
-            Joystick::maxInputRange = max;
-         }*/
-
          ~Joystick()
          {
-            //delete directInput;
-            //delete joystick;
+            
          }
 
          //Chuck: Callback function of EnumDevices; called everytime direct input found a device (filtered),
@@ -179,13 +169,13 @@ namespace octet{
             //hr = joystick->SetDataFormat(&c_dfDIJoystick); //Chuck: specify what kind of structure we will have when using ::GetDeviceState
          }
 
-         void AcquireInputData(int playerId){
+         bool AcquireInputData(int playerId){
             
             HRESULT hr;
-            DIJOYSTATE js;
+            //DIJOYSTATE js;
 
             if (joysticks[playerId] == nullptr)
-               return; //js;
+               return false; //js;
 
             //Chuck: Poll the device to read the current state
             hr = joysticks[playerId]->Poll();
@@ -194,27 +184,27 @@ namespace octet{
                //Chuck: input is interrupted, we aren't tracking any state between polls, so
                // we don't have any special reset that needs to be done. We just re-acquire and try again.
                hr = joysticks[playerId]->Acquire();
-               return;// js;
+               return false;// js;
             }
 
             //Chuck: get the input's device state
-            hr = joysticks[playerId]->GetDeviceState(sizeof(DIJOYSTATE), &js);
+            hr = joysticks[playerId]->GetDeviceState(sizeof(DIJOYSTATE), &curr_state);
 
             if (FAILED(hr)){
                if (DEBUG_EN){
                   printf("Failed on acquiring device data \n");
                }
-               return;// js;
+               return false;// js;
             }
 
-            curr_state = js;
+            //curr_state = js;
 
-            return;// js;
+            return true;// js;
          
          }
          
-         DIJOYSTATE GetCurrentState(){
-            return curr_state;
+         DIJOYSTATE* GetCurrentState(){
+            return &curr_state;
          }
 
          int GetNumberOfDevicesFound(){

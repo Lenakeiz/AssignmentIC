@@ -116,7 +116,7 @@ namespace octet {
       void GameReset(){
          ResetPhysics();
          InitPhysics();
-         joystick->ShutDown(); //Chuck: THIS SET OF INSTRUCTION IS A GAME RESET
+         joystick->ShutDown();
          delete joystick;
          app_init();
       }
@@ -172,24 +172,27 @@ namespace octet {
             {
                //Chuck: Dealing movement
                if (players[i]->GetActive()){
+
                   if (i < joystick->GetNumberOfDevicesFound()){
-                     joystick->AcquireInputData(i);
-                     DIJOYSTATE joyInput = joystick->GetCurrentState();
-                     players[i]->ApplyCentralForce(btVector3(joyInput.lX, 0, joyInput.lY));
-                     players[i]->ApplyPowerUps(joyInput.rgbButtons, 32);
+                     if (joystick->AcquireInputData(i)){
+                        DIJOYSTATE* joyInput = joystick->GetCurrentState();
+                        players[i]->ApplyCentralForce(btVector3(joyInput->lX, 0, joyInput->lY));
+                        players[i]->ApplyPowerUps(joyInput->rgbButtons);
+                        }
                   }
                   else{
                      btVector3 physics_vector(0, 0, 0);
                      if (is_key_down(keyboardset[0])){
                         physics_vector += (btVector3(0, 0, -120));
                      }
+                     else if (is_key_down(keyboardset[2])){
+                        physics_vector += (btVector3(0, 0, 120));
+                     }
+
                      if (is_key_down(keyboardset[1])){
                         physics_vector += (btVector3(-120, 0, 0));
                      }
-                     if (is_key_down(keyboardset[2])){
-                        physics_vector += (btVector3(0, 0, 120));
-                     }
-                     if (is_key_down(keyboardset[3])){
+                     else if (is_key_down(keyboardset[3])){
                         physics_vector += (btVector3(120, 0, 0));
                      }
                      players[i]->ApplyCentralForce(physics_vector);

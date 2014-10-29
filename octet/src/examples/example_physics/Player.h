@@ -68,22 +68,22 @@ namespace octet {
 
       void ResetPowerUps(){
 
-         for (unsigned i = 0; i < NUM_POWERUPS - 1; i++)
+         for (unsigned i = 0; i < NUM_POWERUPS ; i++)
          {
             powerups[i] = false;
          }
 
          timers[0].AssignTargetSec(3);
          timers[1].AssignTargetSec(3);
-         timers[2].AssignTargetSec(30); //DASH
+         timers[2].AssignTargetSec(3); //DASH
          timers[3].AssignTargetSec(3);
 
       }
 
-      void ApplyPowerUps(BYTE rgbButtons[], int size){
+      void ApplyPowerUps(BYTE* rgbButtons){
 
-         for (unsigned i = 0; i < size; i++){
-            if (!powerups[i] && (rgbButtons[i] & 0x80)){
+         for (unsigned i = 0; i < 4; i++){
+            if ((rgbButtons[i] & 0x80) && !powerups[i]){
                
                //if pressed apply powerups
                btVector3 linearVelNorm;
@@ -91,14 +91,14 @@ namespace octet {
                   case 0:
                      //Chuck: not implemented
                      break;
-                  case 1:
+                  case 1: 
                      //Chuck: not implemented
                      break;
                   case 2:
                      //Chuck: DASH
                      linearVelNorm = rigidBody->getLinearVelocity();
                      linearVelNorm = linearVelNorm.normalize();
-                     rigidBody->applyCentralImpulse(linearVelNorm * 20);
+                     rigidBody->applyCentralImpulse(linearVelNorm * 40);
                      break;
                   case 3:
                      //Chuck: not implemented
