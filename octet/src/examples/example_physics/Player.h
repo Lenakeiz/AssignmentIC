@@ -4,22 +4,29 @@
 namespace octet {
    
    enum { NUM_POWERUPS = 4 };
-
+   enum class PowerUp { Undefinied0, Undefinied1, Dash, Massive };
+   enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
 
    class Player
    {
    private:
+
+      const unsigned activeTime = 2;
+      const unsigned cooldownTime = 6;
+
       int lifes;
       Color color;
-      float mass;
+      float initial_mass;
+      float curr_mass;
       bool active;
 
       //Timers for powerups and cooldowns
-      bool powerups[NUM_POWERUPS];
-      Clock timers[NUM_POWERUPS];
+      dynarray<PowerUpState> powerups;
+      dynarray<Clock*> timers;
       
       ref<material> mat;
+      ref<material> metalmat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
       btDefaultMotionState *motion; //Chuck: KEEP ATTENTION HOW RELEASE THIS
@@ -35,9 +42,10 @@ namespace octet {
          
          lifes = n;
          active = true;
-         mass = 0.5f;
+         curr_mass = initial_mass = 0.5f;
 
          this->mat = &material;
+         metalmat = new octet::material(new image("assets/metal.gif"));
          this->color = playerColor;
          //Creating default rigidbody
          btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
@@ -48,9 +56,9 @@ namespace octet {
 
          //Calculate inertia for the body
          btVector3 inertia;
-         shape->calculateLocalInertia(mass, inertia);
+         shape->calculateLocalInertia(initial_mass, inertia);
          //Saving rigid body 
-         rigidBody = new btRigidBody(mass, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
+         rigidBody = new btRigidBody(initial_mass, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
 
          //prevent body from deactivating
          rigidBody->setActivationState(DISABLE_DEACTIVATION);
@@ -60,7 +68,7 @@ namespace octet {
          position.loadIdentity();
          position.scale(radius, halfheight, radius);
          position.rotate(90, 1, 0, 0);
-         mesh_cylinder* meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
+         ref<mesh_cylinder> meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);
          meshinstance = new mesh_instance(node, meshcylinder, mat);
 
@@ -70,23 +78,49 @@ namespace octet {
 
          for (unsigned i = 0; i < NUM_POWERUPS ; i++)
          {
-            powerups[i] = false;
+            powerups.push_back(PowerUpState::Activable);
+            timers.push_back(new Clock());
          }
 
-         timers[0].AssignTargetSec(3);
-         timers[1].AssignTargetSec(3);
-         timers[2].AssignTargetSec(3); //DASH
-         timers[3].AssignTargetSec(3);
+      }
 
+      //Chuck: reset player aspect after active state is expired
+      void ResetPlayerAspect(PowerUp pw){
+
+         btVector3 initialInertia;
+
+         switch (pw)
+         {
+            case octet::PowerUp::Undefinied0:
+               //Chuck: do nothing
+               break;
+            case octet::PowerUp::Undefinied1:
+               //Chuck: do nothing
+               break;
+            case octet::PowerUp::Dash:
+               //Chuck: do nothing
+               break;
+            case octet::PowerUp::Massive:
+               curr_mass = initial_mass;
+               rigidBody->getCollisionShape()->calculateLocalInertia(curr_mass,initialInertia);
+               rigidBody->setMassProps(curr_mass,initialInertia);
+               meshinstance->set_material(mat);
+               break;
+            default:
+               break;
+         }
       }
 
       void ApplyPowerUps(BYTE* rgbButtons){
 
+         btVector3 linearVelNorm;
+         btVector3 newInertia;
          for (unsigned i = 0; i < 4; i++){
-            if ((rgbButtons[i] & 0x80) && !powerups[i]){
+            if ((rgbButtons[i] & 0x80) && powerups[i] == PowerUpState::Activable){
                
                //if pressed apply powerups
-               btVector3 linearVelNorm;
+               PowerUpState nextState = powerups[i]; //setting to current state
+               
                switch (i){
                   case 0:
                      //Chuck: not implemented
@@ -98,31 +132,51 @@ namespace octet {
                      //Chuck: DASH: using linear velocity to get directin of movement, applying an impulse to that
                      linearVelNorm = rigidBody->getLinearVelocity();
                      linearVelNorm = linearVelNorm.normalize();
-                     rigidBody->applyCentralImpulse(linearVelNorm * 40);
+                     rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(),0,linearVelNorm.y())*40);
+                     nextState = PowerUpState::Cooldown;
+                     timers[i]->AssignTargetSec(cooldownTime);
                      break;
                   case 3:
-                     //Chuck: not implemented
+                     //Chuck: MASSIVE
+                     curr_mass = initial_mass * 20;
+                     rigidBody->getCollisionShape()->calculateLocalInertia(curr_mass, newInertia);
+                     rigidBody->setMassProps(curr_mass, newInertia);
+                     rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+                     meshinstance->set_material(metalmat);
+                     nextState = PowerUpState::Active;
+                     timers[i]->AssignTargetSec(activeTime);
                      break;
                   default:
                      break;
                }
 
-               powerups[i] = true;
-               timers[i].Reset();
+               powerups[i] = nextState;
+               timers[i]->Reset();
 
             }
          }
       }
 
       void CheckPowerUps(){
+
          for (unsigned i = 0; i < NUM_POWERUPS; i++)
          {
-            if (powerups[i]){
-               if (timers[i].TimeElapsed()){
-                  powerups[i] = false;
+            if (powerups[i]==PowerUpState::Active){
+               if (timers[i]->TimeElapsed()){
+                  powerups[i] = PowerUpState::Cooldown;
+                  ResetPlayerAspect((PowerUp)i);
+                  timers[i]->AssignTargetSec(cooldownTime);
+                  timers[i]->Reset();
+               }
+            }
+            else if (powerups[i] == PowerUpState::Cooldown){
+               if (timers[i]->TimeElapsed())
+               {
+                  powerups[i] = PowerUpState::Activable;
                }
             }
          }
+
       }
 
       const char* GetColorString(){
@@ -137,6 +191,16 @@ namespace octet {
 
       const Color GetColor(){
          return (this->color);
+      }
+
+      const char* GetPowerUpString(PowerUp pow){
+         switch(pow)
+         {
+            case PowerUp::Undefinied0: return "Unavailable";
+            case PowerUp::Undefinied1: return "Unavailable";
+            case PowerUp::Dash: return "Dash";
+            case PowerUp::Massive: return "Massive";
+         }
       }
 
       void SetActive(bool enabled){
@@ -199,6 +263,21 @@ namespace octet {
          mat4t modelToWorld = q;
          modelToWorld[3] = vec4(com[0], com[1], com[2], 1);
          this->SetNodeToWorld(modelToWorld);
+      }
+
+      const string GetInfoString(){
+         string retString;
+         retString.format("Player %s \nLife : %d \nMass : %f\n", GetColorString(), lifes, curr_mass);
+         string pow;
+         for (int i = 0; i < powerups.size(); i++)
+         {
+            pow.format("%s time left: %d \n", GetPowerUpString((PowerUp)i), timers[i]->GetTimeLeft());
+            retString += pow;
+         }
+
+         retString += "\0";
+
+         return retString;
       }
 
       ~Player()

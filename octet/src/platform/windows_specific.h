@@ -172,7 +172,7 @@ namespace octet {
       //Chuck: adding costum dwStyle in case I will remove title bar and buttons
       //DWORD dwStyle = ~(WS_MINIMIZE | WS_MAXIMIZE |WS_MINIMIZEBOX | WS_MAXIMIZEBOX) | WS_OVERLAPPEDWINDOW;
       DWORD dwExStyle = WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST;
-      window_handle = CreateWindowEx(dwExStyle, L"MyClass", L"Sumo Fighter", //Chuck: change to rectworkarea
+      window_handle = CreateWindowEx(dwExStyle, L"MyClass", L"SNES Battle!", //Chuck: change to rectworkarea
          WS_OVERLAPPEDWINDOW, 0, 0, 500, 800, //rectWorkArea.right, rectWorkArea.bottom
          NULL, NULL, wndclass.hInstance, (LPVOID)this
          );
