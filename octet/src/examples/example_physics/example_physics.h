@@ -87,6 +87,42 @@ namespace octet {
          app_init();
       }
 
+      void ResetPlayer(int playerIdx){
+
+         btScalar boardRadius = board->GetRadius();
+         btScalar boardhalfheight = board->GetHalfHeight();
+
+         mat4t modelToWorld;
+         modelToWorld.loadIdentity();
+
+         players[playerIdx]->GetRigidBody()->clearForces();
+         players[playerIdx]->SetState(PlayerState::Ingame);
+
+         switch (players[playerIdx]->GetColor())
+         {
+         case Color::RED:
+            modelToWorld.translate(-(boardRadius * 0.5f), boardhalfheight * 20, 0);
+            break;
+         case Color::GREEN:
+            modelToWorld.translate(boardRadius * 0.5f, boardhalfheight * 20, 0);// var->GetRigidBody()->translate(btVector3(boardRadius * 0.5f, boardhalfheight * 2, 0));
+            break;
+         case Color::BLUE:
+            modelToWorld.translate(0, boardhalfheight * 20, boardRadius * 0.5f);// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, boardRadius * 0.5f));
+            break;
+         case Color::YELLOW:
+            modelToWorld.translate(0, boardhalfheight * 20, -(boardRadius * 0.5f));// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, -(boardRadius * 0.5f)));
+            break;
+         default:
+            break;
+         }
+
+         btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
+         players[playerIdx]->GetRigidBody()->setWorldTransform(trans);
+         players[playerIdx]->GetRigidBody()->applyCentralImpulse(btVector3(0,-10,0)); // SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
+
+      }
+
+      //Chuck: It will used more for debug reasons!
       void ResetPlayers(){
 
          btScalar boardRadius = board->GetRadius();
@@ -99,7 +135,7 @@ namespace octet {
             modelToWorld.loadIdentity();
 
             var->GetRigidBody()->clearForces();
-            var->SetState(PlayerState::Respawing);
+            var->SetState(PlayerState::Ingame);
 
             switch (var->GetColor())
             {
@@ -250,34 +286,26 @@ namespace octet {
                      }
                   }
                   else if (playY <= dead_heigth || distanceToBoard >= dead_radius){
+                     players[i]->DecreaseLife();
                      players[i]->SetState(PlayerState::Dead);
                      if (DEBUG_EN){
                         printf("Player %s Dead \n", players[i]->GetColorString());
                      }
                   }
                   break;
-               case PlayerState::Dead:                  
-                  players[i]->SetState(PlayerState::Respawing); 
+               case PlayerState::Dead:
+                  if (!players[i]->IsLifeEnd()){
+                     ResetPlayer(i);
+                     players[i]->SetState(PlayerState::Respawing);
+               }
+               case PlayerState::Respawing:
+                  if (playY <= boardHeigth * 2){
+                     players[i]->SetState(PlayerState::Ingame);
+                  }
                default:
                   break;
             }
-            /*if (players[i]->GetState() == PlayerState::Ingame){
-               if (distanceToBoard >= boardRadius + active_upper_radius || math::abs(playY) > active_height_upper){
-                  players[i]->SetState(PlayerState::InActive);
-                  if (DEBUG_EN){
-                     printf("Player %s InActive \n", players[i]->GetColorString());
-                  } 
-               }
-            }
-            else{
-               if ((math::abs(playY) <= active_height_lower) && distanceToBoard <= active_lower_radius){
-                  players[i]->SetState(PlayerState::InActive);
-                  if (DEBUG_EN){
-                     printf("Player %s InGame \n", players[i]->GetColorString());
-                  }
-               }
-            }*/
-
+            
             players[i]->CheckPowerUps();
 
          }

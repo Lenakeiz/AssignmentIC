@@ -216,6 +216,14 @@ namespace octet {
          return this->state;
       }
 
+      void DecreaseLife(){
+         lifes--;
+      }
+
+      bool IsLifeEnd(){
+         return lifes == 0;
+      }
+
       void ApplyCentralForce(const btVector3& centralForce){
          rigidBody->applyCentralForce(centralForce);
       }
