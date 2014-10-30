@@ -4,6 +4,7 @@
 namespace octet {
    
    enum { NUM_POWERUPS = 4 };
+   enum class PlayerState { Ingame, InActive, Dead, Respawing };
    enum class PowerUp { Undefinied0, Undefinied1, Dash, Massive };
    enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
@@ -17,9 +18,11 @@ namespace octet {
 
       int lifes;
       Color color;
+      PlayerState state;
       float initial_mass;
       float curr_mass;
       bool active;
+      bool ingame;
 
       //Timers for powerups and cooldowns
       dynarray<PowerUpState> powerups;
@@ -41,7 +44,9 @@ namespace octet {
          ResetPowerUps();
          
          lifes = n;
-         active = true;
+         /*active = true;
+         ingame = true;*/
+         state = PlayerState::Ingame;
          curr_mass = initial_mass = 0.5f;
 
          this->mat = &material;
@@ -203,12 +208,12 @@ namespace octet {
          }
       }
 
-      void SetActive(bool enabled){
-         active=enabled;
+      void SetState(PlayerState state){
+         this->state=state;
       }
 
-      bool GetActive(){
-         return active;
+      PlayerState GetState(){
+         return this->state;
       }
 
       void ApplyCentralForce(const btVector3& centralForce){

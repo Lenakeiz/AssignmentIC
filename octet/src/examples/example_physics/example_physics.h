@@ -99,7 +99,7 @@ namespace octet {
             modelToWorld.loadIdentity();
 
             var->GetRigidBody()->clearForces();
-            var->SetActive(false);
+            var->SetState(PlayerState::Respawing);
 
             switch (var->GetColor())
             {
@@ -178,7 +178,7 @@ namespace octet {
             for (unsigned i = 0; i < players.size(); i++)
             {
                //Chuck: Dealing movement
-               if (players[i]->GetActive()){
+               if (players[i]->GetState() == PlayerState::Ingame){
 
                   if (i < joystick->GetNumberOfDevicesFound()){
                      if (joystick->AcquireInputData(i)){
@@ -212,15 +212,14 @@ namespace octet {
 
       void CheckPLayersStatus(){
 
-         /*btVector3 boardtrans = board->GetRigidBody()->getCenterOfMassPosition();
-         btVector3 boardtransXZ(boardtrans.getX(),0,boardtrans.getZ());
-         btScalar boardY = boardtrans.getY();*/
          btScalar boardRadius = board->GetRadius();
          btScalar boardHeigth = board->GetHalfHeight();
-         btScalar lower_radius = boardRadius * (1 + 0.1); //Chuck: I write like this to give them a sens
-         btScalar upper_radius = boardRadius *(1 + 0.1) + 1.0f;
-         btScalar height_lower = boardHeigth * 5;
-         btScalar height_upper = boardHeigth * 5 + 1.0f;
+         btScalar active_lower_radius = boardRadius * (1 + 0.1); //Chuck: I write like this to give them a sens
+         btScalar active_upper_radius = boardRadius *(1 + 0.1) + 1.0f;
+         btScalar active_height_lower = boardHeigth * 5;
+         btScalar active_height_upper = boardHeigth * 5 + 1.0f;
+         btScalar dead_radius = boardRadius * 2.5f;
+         btScalar dead_heigth = -10.0f;
 
          for (unsigned i = 0; i < players.size(); i++)
          {
@@ -233,23 +232,51 @@ namespace octet {
             btScalar playY = currPLayer.getY();
             
             btScalar distanceToBoard = currPLayerXZ.distance(btVector3(0,0,0));
-            
-            if (players[i]->GetActive()){
-               if (distanceToBoard >= boardRadius + upper_radius || math::abs(playY) > height_upper){
-                  players[i]->SetActive(false);
+            switch (players[i]->GetState())
+            {
+               case PlayerState::Ingame:
+                  if (distanceToBoard >= boardRadius + active_upper_radius || math::abs(playY) > active_height_upper){
+                     players[i]->SetState(PlayerState::InActive);
+                     if (DEBUG_EN){
+                        printf("Player %s InActive \n", players[i]->GetColorString());
+                     }
+                  }
+                  break;
+               case PlayerState::InActive:
+                  if ((math::abs(playY) <= active_height_lower) && distanceToBoard <= active_lower_radius){
+                     players[i]->SetState(PlayerState::Ingame);
+                     if (DEBUG_EN){
+                        printf("Player %s InGame \n", players[i]->GetColorString());
+                     }
+                  }
+                  else if (playY <= dead_heigth || distanceToBoard >= dead_radius){
+                     players[i]->SetState(PlayerState::Dead);
+                     if (DEBUG_EN){
+                        printf("Player %s Dead \n", players[i]->GetColorString());
+                     }
+                  }
+                  break;
+               case PlayerState::Dead:                  
+                  players[i]->SetState(PlayerState::Respawing); 
+               default:
+                  break;
+            }
+            /*if (players[i]->GetState() == PlayerState::Ingame){
+               if (distanceToBoard >= boardRadius + active_upper_radius || math::abs(playY) > active_height_upper){
+                  players[i]->SetState(PlayerState::InActive);
                   if (DEBUG_EN){
-                     printf("Player %s false \n", players[i]->GetColorString());
+                     printf("Player %s InActive \n", players[i]->GetColorString());
                   } 
                }
             }
             else{
-               if ((math::abs(playY) <= height_lower) && distanceToBoard <= lower_radius){
-                  players[i]->SetActive(true);
+               if ((math::abs(playY) <= active_height_lower) && distanceToBoard <= active_lower_radius){
+                  players[i]->SetState(PlayerState::InActive);
                   if (DEBUG_EN){
-                     printf("Player %s true \n", players[i]->GetColorString());
+                     printf("Player %s InGame \n", players[i]->GetColorString());
                   }
                }
-            }
+            }*/
 
             players[i]->CheckPowerUps();
 
