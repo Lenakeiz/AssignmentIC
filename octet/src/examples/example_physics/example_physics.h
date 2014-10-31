@@ -51,34 +51,6 @@ namespace octet {
       ref<text_overlay> overlay;
       dynarray<ref<mesh_text>> texts;
 
-      //void add_sphere(mat4t_in modelToWorld, btScalar size, material *mat, bool is_dynamic = true) {
-
-      //   btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
-      //   btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
-
-      //   btCollisionShape *shape = new btSphereShape(size);
-
-      //   btTransform transform(matrix, pos);
-
-      //   btDefaultMotionState *motion = new btDefaultMotionState(transform);
-
-      //   btScalar mass = is_dynamic ? 5.0f : 0.0f;
-      //   btVector3 inertia;
-      //   shape->calculateLocalInertia(mass, inertia);
-
-      //   btRigidBody *rigidBody = new btRigidBody(mass, motion, shape, inertia);
-      //   world->addRigidBody(rigidBody);
-      //   //rigid_bodies.push_back(rigidBody);
-
-      //   mesh_sphere *meshsphere = new mesh_sphere(vec3(0, 0, 0), size);
-      //   scene_node *node = new scene_node(modelToWorld, atom_);
-      //   //nodes.push_back(node);
-
-      //   app_scene->add_child(node);
-      //   app_scene->add_mesh_instance(new mesh_instance(node, meshsphere, mat));
-
-      //}
-
       void GameReset(){
          ResetPhysics();
          InitPhysics();
@@ -118,10 +90,11 @@ namespace octet {
 
          btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
          players[playerIdx]->GetRigidBody()->setWorldTransform(trans);
+         players[playerIdx]->GetRigidBody()->setLinearVelocity(btVector3(0,0,0));
+         players[playerIdx]->GetRigidBody()->setAngularVelocity(btVector3(0,0,0));
          players[playerIdx]->GetRigidBody()->applyCentralImpulse(btVector3(0,-10,0)); // SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
 
       }
-
       //Chuck: It will used more for debug reasons!
       void ResetPlayers(){
 
@@ -251,11 +224,11 @@ namespace octet {
          btScalar boardRadius = board->GetRadius();
          btScalar boardHeigth = board->GetHalfHeight();
          btScalar active_lower_radius = boardRadius * (1 + 0.1); //Chuck: I write like this to give them a sens
-         btScalar active_upper_radius = boardRadius *(1 + 0.1) + 1.0f;
-         btScalar active_height_lower = boardHeigth * 5;
-         btScalar active_height_upper = boardHeigth * 5 + 1.0f;
+         btScalar active_upper_radius = boardRadius *(1 + 0.1) + 0.2f;
+         btScalar active_height_lower = boardHeigth * 2;
+         btScalar active_height_upper = boardHeigth * 2 + 0.2f;
          btScalar dead_radius = boardRadius * 2.5f;
-         btScalar dead_heigth = -10.0f;
+         btScalar dead_heigth = -20.0f;
 
          for (unsigned i = 0; i < players.size(); i++)
          {
@@ -272,13 +245,13 @@ namespace octet {
             {
                case PlayerState::Ingame:
                   if (distanceToBoard >= boardRadius + active_upper_radius || math::abs(playY) > active_height_upper){
-                     players[i]->SetState(PlayerState::InActive);
+                     players[i]->SetState(PlayerState::Inactive);
                      if (DEBUG_EN){
-                        printf("Player %s InActive \n", players[i]->GetColorString());
+                        printf("Player %s Inactive \n", players[i]->GetColorString());
                      }
                   }
                   break;
-               case PlayerState::InActive:
+               case PlayerState::Inactive:
                   if ((math::abs(playY) <= active_height_lower) && distanceToBoard <= active_lower_radius){
                      players[i]->SetState(PlayerState::Ingame);
                      if (DEBUG_EN){
@@ -294,14 +267,22 @@ namespace octet {
                   }
                   break;
                case PlayerState::Dead:
-                  if (!players[i]->IsLifeEnd()){
+                  if (!(players[i]->IsLifeEnd())){
                      ResetPlayer(i);
                      players[i]->SetState(PlayerState::Respawing);
-               }
+                     if (DEBUG_EN){
+                        printf("Player %s Respanwing \n", players[i]->GetColorString());
+                     }
+                  }
+               break;
                case PlayerState::Respawing:
                   if (playY <= boardHeigth * 2){
                      players[i]->SetState(PlayerState::Ingame);
+                     if (DEBUG_EN){
+                        printf("Player %s Ingame after respawn \n", players[i]->GetColorString());
+                     }
                   }
+                  break;
                default:
                   break;
             }

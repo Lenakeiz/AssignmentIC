@@ -4,7 +4,7 @@
 namespace octet {
    
    enum { NUM_POWERUPS = 4 };
-   enum class PlayerState { Ingame, InActive, Dead, Respawing };
+   enum class PlayerState { Ingame, Inactive, Dead, Respawing };
    enum class PowerUp { Undefinied0, Undefinied1, Dash, Massive };
    enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
@@ -286,6 +286,13 @@ namespace octet {
          {
             pow.format("%s time left: %d \n", GetPowerUpString((PowerUp)i), timers[i]->GetTimeLeft());
             retString += pow;
+         }
+
+         if (DEBUG_EN){
+            btVector3 position = rigidBody->getCenterOfMassPosition();
+            string pos;
+            pos.format("x: %f\ny: %f\nyz: %f\n", position.x(), position.y(), position.z());
+            retString += pos;
          }
 
          retString += "\0";
