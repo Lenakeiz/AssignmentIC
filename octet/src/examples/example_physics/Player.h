@@ -23,6 +23,7 @@ namespace octet {
       float curr_mass;
       bool active;
       bool ingame;
+      bool aicontrolled;
 
       //Timers for powerups and cooldowns
       dynarray<PowerUpState> powerups;
@@ -38,14 +39,13 @@ namespace octet {
 
    public:
    
-      Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, int n = 4)
+      Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, bool ai ,int n = 4)
       {
          
          ResetPowerUps();
          
          lifes = n;
-         /*active = true;
-         ingame = true;*/
+         this->aicontrolled = ai;
          state = PlayerState::Ingame;
          curr_mass = initial_mass = 0.5f;
 
@@ -185,6 +185,7 @@ namespace octet {
       }
 
       const char* GetColorString(){
+
          switch (this->color){
          case Color::RED: return "Red"; break;
          case Color::GREEN: return "Green"; break;
@@ -192,6 +193,7 @@ namespace octet {
          case Color::YELLOW: return "Yellow"; break;
          default: return ""; break;
          }
+
       }
 
       const Color GetColor(){
@@ -208,6 +210,10 @@ namespace octet {
          }
       }
 
+      bool GetAiEnabled(){
+         return aicontrolled;
+      }
+
       void SetState(PlayerState state){
          this->state=state;
       }
@@ -222,6 +228,10 @@ namespace octet {
 
       void DecreaseLife(){
          lifes--;
+      }
+
+      int GetLifes(){
+         return lifes;
       }
 
       bool IsLifeEnd(){

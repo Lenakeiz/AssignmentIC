@@ -5,20 +5,26 @@
 //
 //
 #pragma once
+
 #define DEBUG_EN 1
+
 #include "Player.h"
 #include "Game.h"
 #include "Board.h"
+#include "AI.h"
 #include "Joystick.h"
 #include "Clock.h"
 
-
 namespace octet {
   /// Scene using bullet for physics effects.
-   static const char keyboardset[16] = { key_up, key_left, key_down, key_right, 
+   static const char keyboardset[16] = {
+
+      key_up, key_left, key_down, key_right, 
       'W', 'A', 'S', 'D',
       'T', 'F', 'G', 'H',
-      'I', 'J', 'K', 'L' };
+      'I', 'J', 'K', 'L'
+
+      };
 
    class example_physics : public app {
    
@@ -44,6 +50,7 @@ namespace octet {
       //Chuck: adding array for players currently playing and board
       ref<mesh_instance> background;
       dynarray<Player*> players;
+      ref<AI> ai;
       ref<Board> board;
       
       //Chuck: adding reference to the camera
@@ -193,7 +200,7 @@ namespace octet {
             for (unsigned i = 0; i < players.size(); i++)
             {
                //Chuck: Dealing movement
-               if (players[i]->GetState() == PlayerState::Ingame){
+               if (players[i]->GetState() == PlayerState::Ingame && !players[i]->GetAiEnabled()){
 
                   if (i < joystick->GetNumberOfDevicesFound()){
                      if (joystick->AcquireInputData(i)){
@@ -222,6 +229,11 @@ namespace octet {
                      players[i]->ApplyCentralForce(physics_vector);
                   
                   }
+               }
+               //AI Decision
+               else
+               {
+                  ai->MovePlayer(players, i);
                }
             }
          }
@@ -372,8 +384,8 @@ namespace octet {
             if (num_players == 0) num_players = 4;
             else (num_players += 1);
 
-            /*btScalar boardRadius = 40.0f;
-            btScalar boardhalfheight = 2.0f;*/
+            ai = new AI();
+
             vec3 boardsize(40.0f,2.0f,40.0f);
             btScalar back_size = 300;
 
@@ -439,7 +451,8 @@ namespace octet {
                      break;
                }
 
-               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld, 4); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               bool aIcontrolled = i >= joystick->GetNumberOfDevicesFound();
+               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld, aIcontrolled, 4); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
                
                world->addRigidBody(player->GetRigidBody());
                
