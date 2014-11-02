@@ -231,7 +231,7 @@ namespace octet {
                   }
                }
                //AI Decision
-               else
+               else if (players[i]->GetState() == PlayerState::Ingame)
                {
                   ai->MovePlayer(players, i);
                }
