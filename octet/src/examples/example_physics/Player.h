@@ -4,7 +4,7 @@
 namespace octet {
    
    enum { NUM_POWERUPS = 4 };
-   enum class PlayerState { Ingame, Inactive, Dead, Respawing };
+   enum class PlayerState { Ingame, Inactive, KO, Dead, Respawing };
    enum class PowerUp { Undefinied0, Undefinied1, Dash, Massive };
    enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
@@ -214,6 +214,10 @@ namespace octet {
 
       PlayerState GetState(){
          return this->state;
+      }
+
+      void SetLife(unsigned lifes){
+         this->lifes = lifes;
       }
 
       void DecreaseLife(){

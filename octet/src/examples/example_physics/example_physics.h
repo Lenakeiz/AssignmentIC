@@ -7,6 +7,7 @@
 #pragma once
 #define DEBUG_EN 1
 #include "Player.h"
+#include "Game.h"
 #include "Board.h"
 #include "Joystick.h"
 #include "Clock.h"
@@ -19,15 +20,16 @@ namespace octet {
       'T', 'F', 'G', 'H',
       'I', 'J', 'K', 'L' };
 
-   enum class GameState { IDLE, PLAY, END};
-
    class example_physics : public app {
    
       Joystick* joystick = nullptr;
 
       int num_players;
       enum {MaxPLayers = 4};
-      GameState gs;
+
+      ref<Game> gs;
+      unsigned gameWinner = -1;
+
       const int gravity = -80;
       
       // scene for drawing box
@@ -98,6 +100,8 @@ namespace octet {
       //Chuck: It will used more for debug reasons!
       void ResetPlayers(){
 
+         gs->Reset();
+
          btScalar boardRadius = board->GetRadius();
          btScalar boardhalfheight = board->GetHalfHeight();
 
@@ -109,6 +113,7 @@ namespace octet {
 
             var->GetRigidBody()->clearForces();
             var->SetState(PlayerState::Ingame);
+            var->SetLife(4);
 
             switch (var->GetColor())
             {
@@ -176,12 +181,13 @@ namespace octet {
 
          if (is_key_down(key_esc)) exit(1);
 
-         if (is_key_down(key_space))
-         {
-            ResetPlayers();
-            //GameReset();
+         if (gs->GetState() == GameState::END || DEBUG_EN){
+            if (is_key_down(key_space))
+            {
+               ResetPlayers();
+            }
          }
-         else{
+         if (gs->GetState() == GameState::PLAY){
 
             unsigned offsetKey = 0;
             for (unsigned i = 0; i < players.size(); i++)
@@ -194,7 +200,7 @@ namespace octet {
                         DIJOYSTATE* joyInput = joystick->GetCurrentState();
                         players[i]->ApplyCentralForce(btVector3(joyInput->lX, 0, joyInput->lY));
                         players[i]->ApplyPowerUps(joyInput->rgbButtons);
-                        }
+                     }
                   }
                   else{
                      if (DEBUG_EN) offsetKey = i * 4;
@@ -212,9 +218,11 @@ namespace octet {
                      else if (is_key_down(keyboardset[3 + offsetKey])){
                         physics_vector += (btVector3(120, 0, 0));
                      }
+
                      players[i]->ApplyCentralForce(physics_vector);
+                  
                   }
-               }                              
+               }
             }
          }
       }
@@ -260,18 +268,24 @@ namespace octet {
                   }
                   else if (playY <= dead_heigth || distanceToBoard >= dead_radius){
                      players[i]->DecreaseLife();
-                     players[i]->SetState(PlayerState::Dead);
+                     players[i]->SetState(PlayerState::KO);
                      if (DEBUG_EN){
-                        printf("Player %s Dead \n", players[i]->GetColorString());
+                        printf("Player %s KO \n", players[i]->GetColorString());
                      }
                   }
                   break;
-               case PlayerState::Dead:
+               case PlayerState::KO:
                   if (!(players[i]->IsLifeEnd())){
                      ResetPlayer(i);
                      players[i]->SetState(PlayerState::Respawing);
                      if (DEBUG_EN){
                         printf("Player %s Respanwing \n", players[i]->GetColorString());
+                     }
+                  }
+                  else{
+                     players[i]->SetState(PlayerState::Dead);
+                     if (DEBUG_EN){
+                        printf("Player %s Dead \n", players[i]->GetColorString());
                      }
                   }
                break;
@@ -292,6 +306,14 @@ namespace octet {
          }
       }
    
+      void CheckGameStatus(){
+         
+         int num_winner;
+         int winner;
+
+         gs->CheckGameStatus(players);
+      }
+
       void SetPlayersToTheWorld(){
          for (unsigned i = 0; i != players.size(); i++)
          {
@@ -311,12 +333,17 @@ namespace octet {
 
          for (unsigned i = 0; i < texts.size(); i++)
          {
-            texts[i]->clear();
-            
-            texts[i]->format("%s", players[i]->GetInfoString());
+            if (i < players.size())
+            {
+               texts[i]->clear();
 
-            texts[i]->update();
+               texts[i]->format("%s", players[i]->GetInfoString());
+
+               texts[i]->update();
+            }
          }
+
+         gs->RenderText();
          
          // draw the text overlay
          overlay->render(vx, vy);
@@ -335,8 +362,6 @@ namespace octet {
 
          /// this is called once OpenGL is initialized
          void app_init() {
-
-            gs = GameState::PLAY;
 
             joystick = new Joystick();
             joystick->InitInputDevice(this);
@@ -386,7 +411,7 @@ namespace octet {
             // create the overlay
             overlay = new text_overlay();
             bitmap_font* font = overlay->get_default_font();
-            
+
             for (int i = 0; i < num_players; i++)
             {
                material* mat;
@@ -414,7 +439,7 @@ namespace octet {
                      break;
                }
 
-               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld, 4); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
                
                world->addRigidBody(player->GetRigidBody());
                
@@ -449,6 +474,11 @@ namespace octet {
                texts.push_back(curr_text);
                               
             }
+
+            gs = new Game(GameState::PLAY, font);
+            overlay->add_mesh_text(gs->GetWinnerText());
+            texts.push_back(gs->GetWinnerText());
+
          }
 
          /// this is called to draw the world
@@ -460,6 +490,8 @@ namespace octet {
 
             CheckPLayersStatus();
 
+            CheckGameStatus();
+
             SetPlayersToTheWorld();
             
             int vx = 0, vy = 0;
@@ -469,5 +501,6 @@ namespace octet {
             RenderText(vx,vy);
 
          }
+      
       };
 }

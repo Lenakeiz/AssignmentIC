@@ -437,6 +437,7 @@
     <ClInclude Include="Board.h" />
     <ClInclude Include="Joystick.h" />
     <ClInclude Include="Clock.h" />
+    <ClInclude Include="Game.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\resources\mesh_builder.inl">
