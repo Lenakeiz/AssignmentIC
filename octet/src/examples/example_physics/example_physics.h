@@ -122,6 +122,8 @@ namespace octet {
             var->SetState(PlayerState::Ingame);
             var->SetLife(4);
 
+            //var->ResetPowerUps();
+
             switch (var->GetColor())
             {
             case Color::RED:
@@ -186,8 +188,10 @@ namespace octet {
 
       void AcquireInputs(){
 
-         if (is_key_down(key_esc)) exit(1);
-
+         if (is_key_down(key_esc)){
+            ResetPhysics();
+            exit(1);
+         }
          if (gs->GetState() == GameState::END || DEBUG_EN){
             if (is_key_down(key_space))
             {
@@ -231,9 +235,8 @@ namespace octet {
                   }
                }
                //AI Decision
-               else if (players[i]->GetState() == PlayerState::Ingame)
-               {
-                  ai->MovePlayer(players, i);
+               else if (players[i]->GetState() == PlayerState::Ingame){
+                  ai->MovePlayer(players, i, board->GetRadius());
                }
             }
          }
@@ -243,8 +246,8 @@ namespace octet {
 
          btScalar boardRadius = board->GetRadius();
          btScalar boardHeigth = board->GetHalfHeight();
-         btScalar active_lower_radius = boardRadius * (1 + 0.1); //Chuck: I write like this to give them a sens
-         btScalar active_upper_radius = boardRadius *(1 + 0.1) + 0.2f;
+         btScalar active_lower_radius = boardRadius + players[0]->GetRadius(); //Chuck: I write like this to give them a sens
+         btScalar active_upper_radius = boardRadius + players[0]->GetRadius() + 0.05;
          btScalar active_height_lower = boardHeigth * 2;
          btScalar active_height_upper = boardHeigth * 2 + 0.2f;
          btScalar dead_radius = boardRadius * 2.5f;
@@ -378,11 +381,12 @@ namespace octet {
             joystick = new Joystick();
             joystick->InitInputDevice(this);
 
-            num_players = joystick->GetNumberOfDevicesFound();
-
             //Chuck: I will activate the AI if not device found
-            if (num_players == 0) num_players = 4;
-            else (num_players += 1);
+            //num_players = joystick->GetNumberOfDevicesFound();
+            //if (num_players == 0) num_players = 4;
+            //else (num_players += 1);
+
+            num_players = 4;
 
             ai = new AI();
 
@@ -397,7 +401,7 @@ namespace octet {
             scenecamera->get_node()->access_nodeToParent().rotateX(-30);
             scenecamera->get_node()->access_nodeToParent().translate(0, 20, boardsize.x() * 2);
             auto p = scenecamera->get_far_plane();
-            scenecamera->set_far_plane(500); //->set_perspective(0.1f, 45, 1, 0.00001f, 500); //why using set perspective does not work???
+            scenecamera->set_far_plane(500);
             
             mat4t modelToWorld;
             modelToWorld.loadIdentity();
@@ -406,7 +410,7 @@ namespace octet {
             material *back_mat = new material(new image("assets/supernova.gif"));
             mesh_sphere *meshsphere = new mesh_sphere(vec3(0, 0, 0), back_size);
             scene_node *node = new scene_node(modelToWorld, atom_);
-            node->rotate(180, vec3(0,1,0));
+            node->rotate(180, vec3(0, 1, 0));
             node->rotate(10, vec3(1, 0, 0));
             app_scene->add_child(node);
             background = new mesh_instance(node, meshsphere, back_mat);

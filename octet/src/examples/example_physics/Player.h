@@ -21,6 +21,8 @@ namespace octet {
       PlayerState state;
       float initial_mass;
       float curr_mass;
+      btScalar radius;
+      btScalar halfheight;
       bool active;
       bool ingame;
       bool aicontrolled;
@@ -44,6 +46,9 @@ namespace octet {
          
          ResetPowerUps();
          
+         this->radius = radius;
+         this->halfheight = halfheight;
+
          lifes = n;
          this->aicontrolled = ai;
          state = PlayerState::Ingame;
@@ -182,6 +187,14 @@ namespace octet {
             }
          }
 
+      }
+      
+      const btScalar GetHalfHeight(){
+         return this->halfheight;
+      }
+
+      const btScalar GetRadius(){
+         return this->radius;
       }
 
       const char* GetColorString(){
