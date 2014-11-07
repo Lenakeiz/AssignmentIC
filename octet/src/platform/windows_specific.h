@@ -171,7 +171,8 @@ namespace octet {
       //Chuck: using rect work area for full size
       //Chuck: adding costum dwStyle in case I will remove title bar and buttons
       //DWORD dwStyle = ~(WS_MINIMIZE | WS_MAXIMIZE |WS_MINIMIZEBOX | WS_MAXIMIZEBOX) | WS_OVERLAPPEDWINDOW;
-      DWORD dwExStyle = WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST;
+      DWORD dwExStyle = WS_EX_OVERLAPPEDWINDOW | WS_EX_TOPMOST | WS_EX_WINDOWEDGE;
+      DWORD dxStyle = WS_EX_WINDOWEDGE | WS_OVERLAPPEDWINDOW;
       window_handle = CreateWindowEx(dwExStyle, L"MyClass", L"SNES Battle!", //Chuck: change to rectworkarea
          WS_OVERLAPPEDWINDOW, 0, 0, 500, 800, //rectWorkArea.right, rectWorkArea.bottom
          NULL, NULL, wndclass.hInstance, (LPVOID)this

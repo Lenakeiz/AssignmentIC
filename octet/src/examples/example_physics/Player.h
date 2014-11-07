@@ -10,8 +10,7 @@ namespace octet {
    enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
 
-   class Player
-   {
+   class Player{
    private:
 
       const unsigned activeTime = 2;
@@ -29,8 +28,7 @@ namespace octet {
       bool aicontrolled;
 
       btVector3 homePosition;
-
-      ref<SoundManager> sm;
+      btVector3 spawnPosition;
 
       //Timers for powerups and cooldowns
       dynarray<PowerUpState> powerups;
@@ -40,19 +38,16 @@ namespace octet {
       ref<material> metalmat;
       ref<scene_node> node;
       ref<mesh_instance> meshinstance;
-      btDefaultMotionState *motion; //Chuck: KEEP ATTENTION HOW RELEASE THIS
-      btRigidBody* rigidBody; //Try implementing an non invasive (smart) pointer -- effective c++
+      btDefaultMotionState *motion;
+      btRigidBody* rigidBody;
       btGeneric6DofConstraint* constraint;      
 
    public:
    
       int counter = 0;
       
-      Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, bool ai ,int n = 4)
+      Player(btScalar radius, btScalar halfheight, material& basematerial, material& metalmaterial, Color playerColor, const mat4t& modelToWorld, bool ai, int n = 4)
       {
-         
-         sm = new SoundManager();
-
          ResetPowerUps();
          
          this->radius = radius;
@@ -63,14 +58,15 @@ namespace octet {
          state = PlayerState::Ingame;
          curr_mass = initial_mass = 0.5f;
 
-         this->mat = &material;
-         metalmat = new octet::material(new image("assets/metal.gif"));
+         this->mat = &basematerial;
+         this->metalmat = &metalmaterial;
          this->color = playerColor;
          //Creating default rigidbody
          btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
          btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
          homePosition = btVector3(pos.x(),0,pos.z());
+         spawnPosition = pos;
          btTransform transform(matrix, pos);
          motion = new btDefaultMotionState(transform);
 
@@ -79,10 +75,17 @@ namespace octet {
          shape->calculateLocalInertia(initial_mass, inertia);
          //Saving rigid body 
          rigidBody = new btRigidBody(initial_mass, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
+         rigidBody->setCollisionFlags(rigidBody->getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+         //Chuck: this is a union so the SetUserPOinter woon't work: thx to Fox
+         int index = InnerObjectTag::PlayerTag;
+         rigidBody->setUserIndex(index);
 
          //prevent body from deactivating
          rigidBody->setActivationState(DISABLE_DEACTIVATION);
          rigidBody->setRestitution(1);
+
+         rigidBody->applyCentralImpulse(btVector3(0, -10, 0));
+
          //Creating node to draw with mesh (cylinder mesh is created along z axis: scale and rotate)
          mat4t position;
          position.loadIdentity();
@@ -91,7 +94,7 @@ namespace octet {
          ref<mesh_cylinder> meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);
          meshinstance = new mesh_instance(node, meshcylinder, mat);
-         
+
       }
 
       void ResetPowerUps(){
@@ -129,6 +132,19 @@ namespace octet {
             default:
                break;
          }
+      }
+
+      void ResetPosition(){
+
+         mat4t modelToWorld;
+         modelToWorld.loadIdentity();
+         modelToWorld.translate(spawnPosition.x(), spawnPosition.y(), spawnPosition.z());
+         btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
+         rigidBody->setWorldTransform(trans);
+         rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+         rigidBody->setAngularVelocity(btVector3(0, 0, 0));
+         rigidBody->applyCentralImpulse(btVector3(0, -10, 0));
+
       }
 
       PowerUpState GetPowerUpState(PowerUp pup){
@@ -178,9 +194,9 @@ namespace octet {
          if (linearVelNorm.norm() != 0.0f){
          //Chuck: Apply dash, in any case you have wasted your pup
             linearVelNorm = linearVelNorm.normalize();
-            rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(), 0, linearVelNorm.y()) * 40);
+            rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(), 0, linearVelNorm.y()) * 30);
             powerups[pIndex] = PowerUpState::Cooldown;
-            sm->StartSound("Dash");
+            SoundManager::GetInstance()->StartSound("Dash");
          }
          
          timers[pIndex]->AssignTargetSec(cooldownTime);
@@ -200,7 +216,7 @@ namespace octet {
          powerups[pIndex] = PowerUpState::Active;
          timers[pIndex]->AssignTargetSec(activeTime);
          timers[pIndex]->Reset();
-         sm->StartSound("Metal");
+         SoundManager::GetInstance()->StartSound("Metal");
 
       }
 
@@ -382,7 +398,8 @@ namespace octet {
          if (rigidBody != nullptr)
          {
             return rigidBody;
-         }         
+         }
+         else return nullptr;         
       }
 
       scene_node* GetNode(){

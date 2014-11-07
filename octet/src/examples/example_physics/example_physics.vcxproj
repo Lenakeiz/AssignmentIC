@@ -223,6 +223,7 @@
     <ClInclude Include="AI.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="Clock.h" />
+    <ClInclude Include="CollisionCallbackManager.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Joystick.h" />
     <ClInclude Include="mycylinder.h" />

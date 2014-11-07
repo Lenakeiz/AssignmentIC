@@ -440,6 +440,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="AI.h" />
     <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="CollisionCallbackManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\resources\mesh_builder.inl">

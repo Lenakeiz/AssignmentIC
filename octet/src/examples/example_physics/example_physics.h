@@ -8,13 +8,13 @@
 
 #define DEBUG_EN 1
 
+#include "CollisionCallbackManager.h"
 #include "Player.h"
 #include "Game.h"
 #include "Board.h"
 #include "AI.h"
 #include "Joystick.h"
 #include "Clock.h"
-#include "SoundManager.h"
 
 namespace octet {
   /// Scene using bullet for physics effects.
@@ -30,10 +30,9 @@ namespace octet {
    class example_physics : public app {
    
       Joystick* joystick = nullptr;
-
+      
       int num_players;
       enum {MaxPLayers = 4};
-
       ref<Game> gs;
       unsigned gameWinner = -1;
 
@@ -80,31 +79,10 @@ namespace octet {
          players[playerIdx]->GetRigidBody()->clearForces();
          players[playerIdx]->SetState(PlayerState::Ingame);
 
-         switch (players[playerIdx]->GetColor())
-         {
-         case Color::RED:
-            modelToWorld.translate(-(boardRadius * 0.5f), boardhalfheight * 20, 0);
-            break;
-         case Color::GREEN:
-            modelToWorld.translate(boardRadius * 0.5f, boardhalfheight * 20, 0);// var->GetRigidBody()->translate(btVector3(boardRadius * 0.5f, boardhalfheight * 2, 0));
-            break;
-         case Color::BLUE:
-            modelToWorld.translate(0, boardhalfheight * 20, boardRadius * 0.5f);// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, boardRadius * 0.5f));
-            break;
-         case Color::YELLOW:
-            modelToWorld.translate(0, boardhalfheight * 20, -(boardRadius * 0.5f));// var->GetRigidBody()->translate(btVector3(0, boardhalfheight * 2, -(boardRadius * 0.5f)));
-            break;
-         default:
-            break;
-         }
-
-         btTransform trans(get_btMatrix3x3(modelToWorld), get_btVector3(modelToWorld[3].xyz()));
-         players[playerIdx]->GetRigidBody()->setWorldTransform(trans);
-         players[playerIdx]->GetRigidBody()->setLinearVelocity(btVector3(0,0,0));
-         players[playerIdx]->GetRigidBody()->setAngularVelocity(btVector3(0,0,0));
-         players[playerIdx]->GetRigidBody()->applyCentralImpulse(btVector3(0,-10,0)); // SetTransform(trans); //translate(btVector3(-(boardRadius * 0.5f), boardhalfheight * 2, 0));
+         players[playerIdx]->ResetPosition();
 
       }
+      
       //Chuck: It will used more for debug reasons!
       void ResetPlayers(){
 
@@ -156,6 +134,7 @@ namespace octet {
          solver = new btSequentialImpulseConstraintSolver();
          world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, &config);
          world->setGravity(btVector3(0, gravity, 0)); //To prevent strange behaviour on the collisions (one over the other)
+         gContactAddedCallback = CollisionCallbackManager::contactCallback;
       }
 
       void ResetPhysics(){
@@ -392,7 +371,7 @@ namespace octet {
             ai = new AI();
 
             vec3 boardsize(40.0f,2.0f,40.0f);
-            btScalar back_size = 300;
+            btScalar back_size = 130;
 
             app_scene = new visual_scene();
             app_scene->create_default_camera_and_lights();
@@ -402,17 +381,17 @@ namespace octet {
             scenecamera->get_node()->access_nodeToParent().rotateX(-30);
             scenecamera->get_node()->access_nodeToParent().translate(0, 20, boardsize.x() * 2);
             auto p = scenecamera->get_far_plane();
-            scenecamera->set_far_plane(500);
+            scenecamera->set_far_plane(1000);
             
             mat4t modelToWorld;
             modelToWorld.loadIdentity();
 
             //Chuck: setting the background
-            material *back_mat = new material(new image("assets/supernova.gif"));
+            material *back_mat = new material(new image("assets/skyzone.gif"));
             mesh_sphere *meshsphere = new mesh_sphere(vec3(0, 0, 0), back_size);
             scene_node *node = new scene_node(modelToWorld, atom_);
-            node->rotate(180, vec3(0, 1, 0));
-            node->rotate(10, vec3(1, 0, 0));
+            node->rotate(140, vec3(0, 1, 0));
+            //node->rotate(10, vec3(1, 0, 0));
             app_scene->add_child(node);
             background = new mesh_instance(node, meshsphere, back_mat);
             app_scene->add_mesh_instance(background);
@@ -432,32 +411,37 @@ namespace octet {
             for (int i = 0; i < num_players; i++)
             {
                material* mat;
+               material* metalmat;
                modelToWorld.loadIdentity();
                
                switch ((Color)i)
                {
                case Color::RED:
                   mat = new material(vec4(1, 0, 0, 1));
-                  modelToWorld.translate(-(boardsize.x() * 0.5f), boardsize.y() * 2, -0);
+                  metalmat = new material(new image("assets/redmetal.gif"));
+                  modelToWorld.translate(-(boardsize.x() * 0.5f), boardsize.y() * 20, -0);
                   break;
                case Color::GREEN:
                   mat = new material(vec4(0, 1, 0, 1));
-                  modelToWorld.translate(boardsize.x()  * 0.5f, boardsize.y() * 2, 0);
+                  metalmat = new material(new image("assets/greenmetal.gif"));
+                  modelToWorld.translate(boardsize.x()  * 0.5f, boardsize.y() * 20, 0);
                   break;
                case Color::BLUE:
                   mat = new material(vec4(0, 0, 1, 1));
-                  modelToWorld.translate(0, boardsize.y() * 2, boardsize.x() * 0.5f);
+                  metalmat = new material(new image("assets/bluemetal.gif"));
+                  modelToWorld.translate(0, boardsize.y() * 20, boardsize.x() * 0.5f);
                   break;
                case Color::YELLOW:
                   mat = new material(vec4(1, 1, 0, 1));
-                  modelToWorld.translate(0, boardsize.y() * 2, -(boardsize.x() * 0.5f));
+                  metalmat = new material(new image("assets/yellowmetal.gif"));
+                  modelToWorld.translate(0, boardsize.y() * 20, -(boardsize.x() * 0.5f));
                   break;
                   default:
                      break;
                }
 
                bool aIcontrolled = i >= joystick->GetNumberOfDevicesFound();
-               Player *player = new Player(3.0f, 1.0f, *mat, (Color)i, modelToWorld, aIcontrolled, 4); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
+               Player *player = new Player(3.0f, 1.0f, *mat, *metalmat, (Color)i, modelToWorld, aIcontrolled, 4); //Chuck: assign a transform here to pass to player, the player does not need to know board dimension
                
                world->addRigidBody(player->GetRigidBody());
                
@@ -512,6 +496,8 @@ namespace octet {
 
             SetPlayersToTheWorld();
             
+            background->get_node()->rotate(0.05f, vec3(0,1,0));
+
             int vx = 0, vy = 0;
             
             RenderScene(vx,vy);

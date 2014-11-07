@@ -16,11 +16,11 @@ namespace octet{
       ///Find a suitable player to fight;
       void MovePlayer(dynarray<Player*> players, const int currPlayerIdx, const btScalar radius){
          
-         if (rand->get(0.0f, 1.0f) >= 0.4f) players[currPlayerIdx]->counter++;
+         if (rand->get(0.0f, 1.0f) >= 0.3f) players[currPlayerIdx]->counter++;
          //Chuck: Random behavior
-         if (players[currPlayerIdx]->counter >= 50){
+         if (players[currPlayerIdx]->counter >= 30){
             players[currPlayerIdx]->MoveToHomePosition(rand->get(70,121));
-            if (players[currPlayerIdx]->counter >= 53){
+            if (players[currPlayerIdx]->counter >= 35){
                players[currPlayerIdx]->counter = 0;
             }
             return;
@@ -37,21 +37,15 @@ namespace octet{
          
          if (distanceOnBoard <= radius * 0.5f){
             curr_behav = Behavior::Aggressive;
-            /*if (DEBUG_EN)
-               printf("Aggressive");*/
          }
          else if (distanceOnBoard > radius * 0.5f && distanceOnBoard <= radius * 0.75f){
             //roll a dice for the balanced behavior (20 - 60% going to the center)
-            attBeh = rand->get(0.7f, 0.9f);
+            attBeh = rand->get(0.0f, 1.0f); //0.7,0.9
             defBeh = 1 - attBeh;
             curr_behav = Behavior::Balanced;
-            /*if (DEBUG_EN)
-               printf("Balanced");*/
          }
          else if (distanceOnBoard > radius * 0.75f && distanceOnBoard <= radius){
             curr_behav = Behavior::Defensive;
-            /*if (DEBUG_EN)
-               printf("Defensive");*/
          }
          
          btVector3 currentNormalizeVelocityDirection;

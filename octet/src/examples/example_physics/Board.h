@@ -21,7 +21,7 @@ namespace octet{
          current_tilt = 0;
          this->size=size;
          //Assigning material
-         mat = new material(new image("assets/Stone_floor_09.gif"));
+         mat = new material(new image("assets/ground3.gif"));
 
          //Creating default rigidbody
          mat4t modelToWorld;
@@ -37,6 +37,9 @@ namespace octet{
          shape->calculateLocalInertia(0.0f, inertia);
          //Saving rigid body 
          rigidBody = new btRigidBody(0.0f, motion, shape, inertia); //need to add this to the world (bullet physics) and also to the rigid bodies collection
+         //rigidBody->setCollisionFlags(rigidBody->getCollisionFlags() & btCollisionObject::CF_STATIC_OBJECT);
+         int index = InnerObjectTag::BoardTag;
+         rigidBody->setUserIndex(index);
          
          //Creating node to draw with mesh
          mat4t position;
