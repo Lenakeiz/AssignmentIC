@@ -1,5 +1,6 @@
 #pragma once
 #include "Clock.h"
+#include "SoundManager.h"
 
 namespace octet {
    
@@ -27,6 +28,10 @@ namespace octet {
       bool ingame;
       bool aicontrolled;
 
+      btVector3 homePosition;
+
+      ref<SoundManager> sm;
+
       //Timers for powerups and cooldowns
       dynarray<PowerUpState> powerups;
       dynarray<Clock*> timers;
@@ -41,9 +46,13 @@ namespace octet {
 
    public:
    
+      int counter = 0;
+      
       Player(btScalar radius, btScalar halfheight, material& material, Color playerColor, const mat4t& modelToWorld, bool ai ,int n = 4)
       {
          
+         sm = new SoundManager();
+
          ResetPowerUps();
          
          this->radius = radius;
@@ -61,6 +70,7 @@ namespace octet {
          btCollisionShape *shape = new btCylinderShape(btVector3(radius, halfheight, radius));
          btMatrix3x3 matrix(get_btMatrix3x3(modelToWorld));
          btVector3 pos(get_btVector3(modelToWorld[3].xyz()));
+         homePosition = btVector3(pos.x(),0,pos.z());
          btTransform transform(matrix, pos);
          motion = new btDefaultMotionState(transform);
 
@@ -170,6 +180,7 @@ namespace octet {
             linearVelNorm = linearVelNorm.normalize();
             rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(), 0, linearVelNorm.y()) * 40);
             powerups[pIndex] = PowerUpState::Cooldown;
+            sm->StartSound("Dash");
          }
          
          timers[pIndex]->AssignTargetSec(cooldownTime);
@@ -189,6 +200,8 @@ namespace octet {
          powerups[pIndex] = PowerUpState::Active;
          timers[pIndex]->AssignTargetSec(activeTime);
          timers[pIndex]->Reset();
+         sm->StartSound("Metal");
+
       }
 
       void CheckPowerUps(){
@@ -212,6 +225,11 @@ namespace octet {
          }
       }
       
+      void MoveToHomePosition(int applForce){
+         btVector3 direction = homePosition - rigidBody->getCenterOfMassPosition();
+         rigidBody->applyCentralForce((direction.normalize()) * applForce);
+      }
+
       const btScalar GetHalfHeight(){
          return this->halfheight;
       }
@@ -361,7 +379,10 @@ namespace octet {
       }
 
       btRigidBody* GetRigidBody(){
-         return rigidBody;
+         if (rigidBody != nullptr)
+         {
+            return rigidBody;
+         }         
       }
 
       scene_node* GetNode(){

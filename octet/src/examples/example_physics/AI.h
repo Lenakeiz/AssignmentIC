@@ -7,7 +7,6 @@ namespace octet{
    class AI : public resource{
 
    private:
-
       dynarray<Player*> availablePlayer;
       Behavior curr_behav;
       octet::math::random* rand;
@@ -16,6 +15,16 @@ namespace octet{
 
       ///Find a suitable player to fight;
       void MovePlayer(dynarray<Player*> players, const int currPlayerIdx, const btScalar radius){
+         
+         if (rand->get(0.0f, 1.0f) >= 0.4f) players[currPlayerIdx]->counter++;
+         //Chuck: Random behavior
+         if (players[currPlayerIdx]->counter >= 50){
+            players[currPlayerIdx]->MoveToHomePosition(rand->get(70,121));
+            if (players[currPlayerIdx]->counter >= 53){
+               players[currPlayerIdx]->counter = 0;
+            }
+            return;
+         }
          
          btVector3 toTarget;
          btVector3 toCenter;
@@ -26,14 +35,14 @@ namespace octet{
          btVector3 COM = players[currPlayerIdx]->GetRigidBody()->getCenterOfMassPosition();
          btScalar distanceOnBoard = btVector3(COM.x(), 0, COM.z()).distance(btVector3(0,0,0));
          
-         if (distanceOnBoard <= radius * 0.4f){
+         if (distanceOnBoard <= radius * 0.5f){
             curr_behav = Behavior::Aggressive;
             /*if (DEBUG_EN)
                printf("Aggressive");*/
          }
-         else if (distanceOnBoard > radius * 0.4f && distanceOnBoard <= radius * 0.75f){
+         else if (distanceOnBoard > radius * 0.5f && distanceOnBoard <= radius * 0.75f){
             //roll a dice for the balanced behavior (20 - 60% going to the center)
-            attBeh = rand->get(0.2f, 0.8f);
+            attBeh = rand->get(0.7f, 0.9f);
             defBeh = 1 - attBeh;
             curr_behav = Behavior::Balanced;
             /*if (DEBUG_EN)
@@ -58,7 +67,7 @@ namespace octet{
                      players[currPlayerIdx]->ApplyDash();
                   }
                   else{
-                     players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toTarget * 120);
+                     players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toTarget * rand->get(90,131));
                   }
                }
                break;
@@ -66,17 +75,15 @@ namespace octet{
                RevertMotionTowardsCenter(players[currPlayerIdx], toCenter);
                players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toCenter * 120);
                linerInterpolation = players[currPlayerIdx]->GetRigidBody()->getInterpolationLinearVelocity();
-               printf("%f\n", linerInterpolation.norm());
-               if (linerInterpolation.norm() > 50.0f && players[currPlayerIdx]->GetPowerUpState(PowerUp::Massive) == PowerUpState::Activable){
+               if (linerInterpolation.norm() > 70.0f && players[currPlayerIdx]->GetPowerUpState(PowerUp::Massive) == PowerUpState::Activable){
                   players[currPlayerIdx]->ApplyMassive();
                }
-               
-
                break;
             case Behavior::Balanced:
                RevertMotionTowardsCenter(players[currPlayerIdx], toCenter);
                if (FindTarget(players, currPlayerIdx, toTarget, currentNormalizeVelocityDirection)){
-                  btVector3 result = (toTarget * 120 * attBeh) + (toCenter * 120 * defBeh);
+                  int forceStrength = rand->get(90,131);
+                  btVector3 result = (toTarget * forceStrength * attBeh) + (toCenter * forceStrength * defBeh);
                   players[currPlayerIdx]->GetRigidBody()->applyCentralForce(result);
                }
                break;

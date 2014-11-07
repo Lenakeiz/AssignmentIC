@@ -14,6 +14,7 @@
 #include "AI.h"
 #include "Joystick.h"
 #include "Clock.h"
+#include "SoundManager.h"
 
 namespace octet {
   /// Scene using bullet for physics effects.

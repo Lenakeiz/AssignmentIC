@@ -227,6 +227,7 @@
     <ClInclude Include="Joystick.h" />
     <ClInclude Include="mycylinder.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="SoundManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\resources\mesh_builder.inl" />
