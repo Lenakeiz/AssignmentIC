@@ -24,41 +24,58 @@ namespace octet{
 
          //Chuck: here we decide the current player behavior 
          btVector3 COM = players[currPlayerIdx]->GetRigidBody()->getCenterOfMassPosition();
-         btScalar distance = btVector3(COM.x(), 0, COM.z()).distance(btVector3(0,0,0));
+         btScalar distanceOnBoard = btVector3(COM.x(), 0, COM.z()).distance(btVector3(0,0,0));
          
-         if (distance <= radius * 0.5f){
+         if (distanceOnBoard <= radius * 0.4f){
             curr_behav = Behavior::Aggressive;
-            if (DEBUG_EN)
-               printf("Aggressive");
+            /*if (DEBUG_EN)
+               printf("Aggressive");*/
          }
-         else if (distance > radius * 0.5f && distance <= radius * 0.75f){
+         else if (distanceOnBoard > radius * 0.4f && distanceOnBoard <= radius * 0.75f){
             //roll a dice for the balanced behavior (20 - 60% going to the center)
             attBeh = rand->get(0.2f, 0.8f);
             defBeh = 1 - attBeh;
             curr_behav = Behavior::Balanced;
-            if (DEBUG_EN)
-               printf("Balanced");
+            /*if (DEBUG_EN)
+               printf("Balanced");*/
          }
-         else if (distance > radius * 0.75f && distance <= radius){
+         else if (distanceOnBoard > radius * 0.75f && distanceOnBoard <= radius){
             curr_behav = Behavior::Defensive;
-            if (DEBUG_EN)
-               printf("Defensive");
+            /*if (DEBUG_EN)
+               printf("Defensive");*/
          }
          
+         btVector3 currentNormalizeVelocityDirection;
+         btVector3 linerInterpolation;
          switch (curr_behav)
          {
             case Behavior::Aggressive:
-               if (FindTarget(players, currPlayerIdx, toTarget)){
-                  players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toTarget * 120);
+               if (FindTarget(players, currPlayerIdx, toTarget, currentNormalizeVelocityDirection)){
+                  
+                  btScalar dotProduct = currentNormalizeVelocityDirection.dot(toTarget);
+                  //Dot product is projection (and remember vectors are normalized)
+                  if (dotProduct >= 0.95f && players[currPlayerIdx]->GetPowerUpState(PowerUp::Dash) == PowerUpState::Activable){
+                     players[currPlayerIdx]->ApplyDash();
+                  }
+                  else{
+                     players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toTarget * 120);
+                  }
                }
                break;
             case Behavior::Defensive:
                RevertMotionTowardsCenter(players[currPlayerIdx], toCenter);
                players[currPlayerIdx]->GetRigidBody()->applyCentralForce(toCenter * 120);
+               linerInterpolation = players[currPlayerIdx]->GetRigidBody()->getInterpolationLinearVelocity();
+               printf("%f\n", linerInterpolation.norm());
+               if (linerInterpolation.norm() > 50.0f && players[currPlayerIdx]->GetPowerUpState(PowerUp::Massive) == PowerUpState::Activable){
+                  players[currPlayerIdx]->ApplyMassive();
+               }
+               
+
                break;
             case Behavior::Balanced:
                RevertMotionTowardsCenter(players[currPlayerIdx], toCenter);
-               if (FindTarget(players, currPlayerIdx, toTarget)){
+               if (FindTarget(players, currPlayerIdx, toTarget, currentNormalizeVelocityDirection)){
                   btVector3 result = (toTarget * 120 * attBeh) + (toCenter * 120 * defBeh);
                   players[currPlayerIdx]->GetRigidBody()->applyCentralForce(result);
                }
@@ -71,7 +88,7 @@ namespace octet{
 
       }
 
-      bool FindTarget(dynarray<Player*> players, const int& currPlayerIdx, btVector3& pointing_vectorxz){
+      bool FindTarget(dynarray<Player*> players, const int& currPlayerIdx, btVector3& pointing_vectorxz, btVector3& currentLinearVelNormalized){
          
          //Chuck: Find the players with most lifes, if more than one attack random
          int maxLife;
@@ -88,26 +105,29 @@ namespace octet{
          int targetPlayer;
          if (availablePlayer.size() != 0)
          {
+
             int targetPlayer = rand->get(0, (availablePlayer.size())); //Chuck: don' t need to add -1 since the round it's always by defect
 
             pointing_vectorxz = getNormalizedDistanceVector(availablePlayer[targetPlayer]->GetRigidBody()->getCenterOfMassPosition(), players[currPlayerIdx]->GetRigidBody()->getCenterOfMassPosition());
 
+            btVector3 linearVelNorm = players[currPlayerIdx]->GetRigidBody()->getLinearVelocity();
+            if (linearVelNorm.norm() != 0.0f){
+               currentLinearVelNormalized = linearVelNorm.normalize();
+            }
+
             return true;
+
          }
          else return false;
-
-         
       }
       
-      void FindAndMoveToTarget(){
-      }
+      void FindAndMoveToTarget(){}
 
       void RevertMotionTowardsCenter(Player* currPlayer, btVector3& pointing_vectorxz){
          
          pointing_vectorxz = getNormalizedDistanceVector(btVector3(0, 0, 0), currPlayer->GetRigidBody()->getCenterOfMassPosition());
          
       }
-      
       
       const btVector3& getNormalizedDistanceVector(const btVector3& b, const btVector3& a){
 

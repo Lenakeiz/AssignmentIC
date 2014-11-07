@@ -192,8 +192,8 @@ namespace octet {
             ResetPhysics();
             exit(1);
          }
-         if (gs->GetState() == GameState::END || DEBUG_EN){
-            if (is_key_down(key_space))
+         if (gs->GetState() == GameState::END){
+            if (is_key_down(key_space) || DEBUG_EN)
             {
                ResetPlayers();
             }

@@ -5,7 +5,7 @@ namespace octet {
    
    enum { NUM_POWERUPS = 4 };
    enum class PlayerState { Ingame, Inactive, KO, Dead, Respawing };
-   enum class PowerUp { Undefinied0, Undefinied1, Dash, Massive };
+   enum class PowerUp { Undefinied0 = 0, Undefinied1 = 1, Dash = 2, Massive = 3};
    enum class PowerUpState { Activable, Active, Cooldown };
    enum class Color { RED, BLUE, GREEN, YELLOW };
 
@@ -81,7 +81,7 @@ namespace octet {
          ref<mesh_cylinder> meshcylinder = new mesh_cylinder(zcylinder(), position, 50);
          node = new scene_node(modelToWorld, atom_);
          meshinstance = new mesh_instance(node, meshcylinder, mat);
-
+         
       }
 
       void ResetPowerUps(){
@@ -121,15 +121,22 @@ namespace octet {
          }
       }
 
+      PowerUpState GetPowerUpState(PowerUp pup){
+         
+         int p = static_cast<int>(pup);
+         return powerups[p];
+
+      }
+
       void ApplyPowerUps(BYTE* rgbButtons){
 
-         btVector3 linearVelNorm;
-         btVector3 newInertia;
+         //btVector3 linearVelNorm;
+         //btVector3 newInertia;
          for (unsigned i = 0; i < 4; i++){
             if ((rgbButtons[i] & 0x80) && powerups[i] == PowerUpState::Activable){
                
                //if pressed apply powerups
-               PowerUpState nextState = powerups[i]; //setting to current state
+               //PowerUpState nextState = powerups[i]; //setting to current state
                
                switch (i){
                   case 0:
@@ -140,31 +147,48 @@ namespace octet {
                      break;
                   case 2:
                      //Chuck: DASH: using linear velocity to get directin of movement, applying an impulse to that
-                     linearVelNorm = rigidBody->getLinearVelocity();
-                     linearVelNorm = linearVelNorm.normalize();
-                     rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(),0,linearVelNorm.y())*40);
-                     nextState = PowerUpState::Cooldown;
-                     timers[i]->AssignTargetSec(cooldownTime);
+                     ApplyDash();
                      break;
                   case 3:
                      //Chuck: MASSIVE
-                     curr_mass = initial_mass * 20;
-                     rigidBody->getCollisionShape()->calculateLocalInertia(curr_mass, newInertia);
-                     rigidBody->setMassProps(curr_mass, newInertia);
-                     rigidBody->setLinearVelocity(btVector3(0, 0, 0));
-                     meshinstance->set_material(metalmat);
-                     nextState = PowerUpState::Active;
-                     timers[i]->AssignTargetSec(activeTime);
+                     ApplyMassive();                     
                      break;
                   default:
                      break;
                }
 
-               powerups[i] = nextState;
-               timers[i]->Reset();
-
             }
          }
+      }
+
+      void ApplyDash(){
+
+         btVector3 linearVelNorm = rigidBody->getLinearVelocity();
+         int pIndex = static_cast<int>(PowerUp::Dash);
+         if (linearVelNorm.norm() != 0.0f){
+         //Chuck: Apply dash, in any case you have wasted your pup
+            linearVelNorm = linearVelNorm.normalize();
+            rigidBody->applyCentralImpulse(btVector3(linearVelNorm.x(), 0, linearVelNorm.y()) * 40);
+            powerups[pIndex] = PowerUpState::Cooldown;
+         }
+         
+         timers[pIndex]->AssignTargetSec(cooldownTime);
+         timers[pIndex]->Reset();
+
+      }
+
+      void ApplyMassive(){
+
+         btVector3 newInertia;
+         int pIndex = static_cast<int>(PowerUp::Massive);
+         curr_mass = initial_mass * 20;
+         rigidBody->getCollisionShape()->calculateLocalInertia(curr_mass, newInertia);
+         rigidBody->setMassProps(curr_mass, newInertia);
+         rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+         meshinstance->set_material(metalmat);
+         powerups[pIndex] = PowerUpState::Active;
+         timers[pIndex]->AssignTargetSec(activeTime);
+         timers[pIndex]->Reset();
       }
 
       void CheckPowerUps(){
@@ -186,7 +210,6 @@ namespace octet {
                }
             }
          }
-
       }
       
       const btScalar GetHalfHeight(){
